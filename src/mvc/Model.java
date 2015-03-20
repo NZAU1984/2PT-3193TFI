@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Observable;
 
-import mvc.ModelException.SECTION;
-import mvc.ModelException.TYPE;
+import mvc.ModelException.ATTRIBUTES;
+import mvc.ModelException.ERRORS;
 import uml_parser.Aggregation;
 import uml_parser.Association;
 import uml_parser.ClassContent;
@@ -174,9 +174,8 @@ public class Model extends Observable
 
 			if(null != getClass(className))
 			{
-				throwErrorAndClean(ModelException.SECTION.CLASS, ModelException.TYPE.DUPLICATE, className);
-
-				return;
+				throw resetAndReturnException(ERRORS.DUPLICATE_CLASS)
+					.set(ATTRIBUTES.CLASS, className);
 			}
 
 			classNames.add(className);
@@ -191,17 +190,9 @@ public class Model extends Observable
 				}
 				catch (DuplicateException e)
 				{
-					sendError(ErrorCenter.DUPLICATE_ATTRIBUTE_NAME,
-							(new StringBuilder())
-								.append(attribute.getIdentifier())
-								.append(" dans la classe ")
-								.append(currentClass.getIdentifier())
-								.toString()
-					);
-
-					resetModel();
-
-					return;
+					throw resetAndReturnException(ERRORS.DUPLICATE_ATTRIBUTE)
+						.set(ATTRIBUTES.ATTRIBUTE, attribute.getIdentifier())
+						.set(ATTRIBUTES.CLASS, className);
 				}
 			}
 
@@ -227,7 +218,12 @@ public class Model extends Observable
 				}
 				catch (DuplicateException e)
 				{
-					sendError(ErrorCenter.DUPLICATE_OPERATION,
+					throw resetAndReturnException(ERRORS.DUPLICATE_OPERATION)
+						.set(ATTRIBUTES.OPERATION_NAME, operation.getIdentifier())
+						.set(ATTRIBUTES.OPERATION_TYPE, operation.getType())
+						.set(ATTRIBUTES.OPERATION_SIGNATURE, sb.toString())
+						.set(ATTRIBUTES.CLASS,  className);
+					/*sendError(ErrorCenter.DUPLICATE_OPERATION,
 							(new StringBuilder())
 								.append("'")
 								.append(sb.toString())
@@ -244,7 +240,7 @@ public class Model extends Observable
 
 					resetModel();
 
-					return;
+					return;*/
 				}
 			}
 
@@ -259,13 +255,16 @@ public class Model extends Observable
 
 			if(null == (parentClass = getClass(parentClassName)))
 			{
-				sendError(ErrorCenter.UNKNOWN_GENERALIZATION_PARENT_CLASS, (new StringBuilder())
+				throw resetAndReturnException(ERRORS.UNKNOWN_GENERALIZATION_SUPERCLASS)
+					.set(ATTRIBUTES.SUPERCLASS, parentClassName);
+
+				/*sendError(ErrorCenter.UNKNOWN_GENERALIZATION_PARENT_CLASS, (new StringBuilder())
 						.append(parentClassName)
 						.toString());
 
 				resetModel();
 
-				return;
+				return;*/
 			}
 
 			for(String childClassName : generalization.getSubclassNames())
@@ -274,7 +273,10 @@ public class Model extends Observable
 
 				if(null == (childClass = getClass(childClassName)))
 				{
-					sendError(ErrorCenter.UNKNOWN_GENERALIZATION_CHILD_CLASS, (new StringBuilder())
+					throw resetAndReturnException(ERRORS.UNKNOWN_GENERALIZATION_SUBCLASS)
+						.set(ATTRIBUTES.SUPERCLASS, parentClassName)
+						.set(ATTRIBUTES.SUBCLASS, childClassName);
+					/*sendError(ErrorCenter.UNKNOWN_GENERALIZATION_CHILD_CLASS, (new StringBuilder())
 							.append(childClassName)
 							.append(" de la généralisation (classe parent) ")
 							.append(parentClassName)
@@ -282,7 +284,7 @@ public class Model extends Observable
 
 					resetModel();
 
-					return;
+					return;*/
 				}
 
 				parentClass.addChildClass(childClass);
@@ -298,47 +300,77 @@ public class Model extends Observable
 
 			if(classContainsInheritanceCycle(item.getValue()))
 			{
-				sendError(ErrorCenter.INHERITANCE_CYCLE_DETECTED);
+				throw resetAndReturnException(ERRORS.INHERITANCE_CYCLE);
+
+				/*sendError(ErrorCenter.INHERITANCE_CYCLE_DETECTED);
 
 				resetModel();
 
-				return;
+				return;*/
 			}
 		}
 
 		for(Association association : umlModel.getAssociations())
 		{
-			ClassContainer firstClass	= null;
-			ClassContainer secondClass	= null;
+			ClassContainer firstClass		= null;
+			ClassContainer secondClass		= null;
+			ModelException modelException	= null;
 
 			if(null == (firstClass = getClass(association.getFirstRole().getIdentifier())))
 			{
-				sendError(ErrorCenter.UNKNOWN_ASSOCIATION_CLASS, association.getFirstRole().getIdentifier());
-			}
-			else if(null == (secondClass = getClass(association.getSecondRole().getIdentifier())))
-			{
-				sendError(ErrorCenter.UNKNOWN_ASSOCIATION_CLASS, association.getSecondRole().getIdentifier());
+				//sendError(ErrorCenter.UNKNOWN_ASSOCIATION_CLASS, association.getFirstRole().getIdentifier());
+				modelException	= new ModelException(ERRORS.UNKNOWN_ASSOCIATION_CLASS)
+					.set(ATTRIBUTES.FIRST_CLASS, association.getFirstRole().getIdentifier());
 			}
 
-			if((null == firstClass) || (null == secondClass))
+			if(null == (secondClass = getClass(association.getSecondRole().getIdentifier())))
+			{
+				//sendError(ErrorCenter.UNKNOWN_ASSOCIATION_CLASS, association.getSecondRole().getIdentifier());
+				if(null == modelException)
+				{
+					modelException	= new ModelException(ERRORS.UNKNOWN_ASSOCIATION_CLASS)
+						.set(ATTRIBUTES.FIRST_CLASS, association.getSecondRole().getIdentifier());
+				}
+				else
+				{
+					modelException.set(ATTRIBUTES.SECOND_CLASS, association.getSecondRole().getIdentifier());
+				}
+			}
+
+			if(null != modelException)
+			{
+				resetModel();
+
+				throw modelException;
+			}
+
+			/*if((null == firstClass) || (null == secondClass))
 			{
 				resetModel();
 
 				return;
-			}
+			}*/
 
-			String associationName	= association.getIdentifier();
+			String associationName			= association.getIdentifier();
+			boolean exceptionInFirstClass	= true;
 
 			try
 			{
 				firstClass.addAssociation(association, associationName, secondClass.getName(),
 						association.getFirstRole().getMultiplicity());
+
+				exceptionInFirstClass	= false;
+
 				secondClass.addAssociation(association, associationName, firstClass.getName(),
 						association.getSecondRole().getMultiplicity());
 			}
 			catch (DuplicateException e)
 			{
-				sendError(ErrorCenter.DUPLICATE_ASSOCIATION, associationName);
+				throw resetAndReturnException(ERRORS.DUPLICATE_ASSOCIATION)
+					.set(ATTRIBUTES.ASSOCIATION, associationName)
+					.set(ATTRIBUTES.CLASS, (exceptionInFirstClass ? firstClass.getName() : secondClass.getName()));
+
+				//sendError(ErrorCenter.DUPLICATE_ASSOCIATION, associationName);
 			}
 		}
 
@@ -349,7 +381,10 @@ public class Model extends Observable
 
 			if(null == (containerClass = getClass(containerName)))
 			{
-				sendError(ErrorCenter.UNKNOWN_AGGREGATION_CONTAINER_CLASS, containerName);
+				throw resetAndReturnException(ERRORS.UNKNOWN_AGGREGATION_CONTAINER_CLASS)
+					.set(ATTRIBUTES.CONTAINER_CLASS, containerName);
+
+				//sendError(ErrorCenter.UNKNOWN_AGGREGATION_CONTAINER_CLASS, containerName);
 			}
 
 			StringBuilder sb	= new StringBuilder();
@@ -363,11 +398,15 @@ public class Model extends Observable
 
 				if(null == (partClass = getClass(partName)))
 				{
-					sendError(ErrorCenter.UNKNOWN_AGGREGATION_PART_CLASS, partName);
+					throw resetAndReturnException(ERRORS.UNKNOWN_AGGREGATION_PART_CLASS)
+						.set(ATTRIBUTES.CONTAINER_CLASS, containerName)
+						.set(ATTRIBUTES.PART_CLASS, partName);
+
+					/*sendError(ErrorCenter.UNKNOWN_AGGREGATION_PART_CLASS, partName);
 
 					resetModel();
 
-					return;
+					return;*/
 				}
 
 				partClass.addAggregation(aggregation, false, containerName);
@@ -451,11 +490,11 @@ public class Model extends Observable
 		notifyObservers(ListContainer.newList(id, list));
 	}
 
-	protected void throwErrorAndClean(SECTION section, TYPE duplicate, String details) throws ModelException
+	protected ModelException resetAndReturnException(ModelException.ERRORS error) throws ModelException
 	{
 		resetModel();
 
-		throw new ModelException(section, duplicate, details);
+		return new ModelException(error);
 	}
 
 	protected void resetModel()

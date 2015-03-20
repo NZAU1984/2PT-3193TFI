@@ -4,6 +4,7 @@ import java.io.File;
 
 import javax.swing.JFileChooser;
 
+import mvc.ModelException.ATTRIBUTES;
 import mvc.views.MainWindow;
 
 public class Controller
@@ -65,16 +66,106 @@ public class Controller
 			{
 				StringBuilder sb	= new StringBuilder();
 
-				switch(e.getSection())
+				switch(e.getError())
 				{
-					case CLASS:
+					case DUPLICATE_ASSOCIATION:
+						sb.append("L'association '")
+							.append(e.get(ATTRIBUTES.ASSOCIATION))
+							.append("' a été définie plus d'une dans dans la classe '")
+							.append(e.get(ATTRIBUTES.CLASS))
+							.append("'.");
 
-						switch(e.getType())
+						break;
+
+					case DUPLICATE_ATTRIBUTE:
+						sb.append("L'attribut ")
+							.append(e.get(ATTRIBUTES.ATTRIBUTE))
+							.append(" a été défini plus d'une fois dans la classe ")
+							.append(e.get(ATTRIBUTES.CLASS))
+							.append(".");
+
+						break;
+
+					case DUPLICATE_CLASS:
+						sb.append("La classe ")
+							.append(e.get(ATTRIBUTES.CLASS))
+							.append(" a été définie plus d'une fois.");
+
+						break;
+
+					case DUPLICATE_OPERATION:
+						sb.append("L'opération ")
+							.append(e.get(ATTRIBUTES.OPERATION_NAME))
+							.append(" avec la signature '")
+							.append(e.get(ATTRIBUTES.OPERATION_SIGNATURE))
+							.append(" '")
+							.append(" et retournant le type ")
+							.append(e.get(ATTRIBUTES.OPERATION_TYPE))
+							.append(" a été définie plus d'une fois dans la classe ")
+							.append(e.get(ATTRIBUTES.CLASS))
+							.append(".");
+
+						break;
+
+					case INHERITANCE_CYCLE:
+						sb.append("Un cycle a été détecté dans l'héritage d'une ou plusieurs classes.");
+
+						break;
+
+					case UNKNOWN_AGGREGATION_CONTAINER_CLASS:
+						sb.append("La classe contenant (\"container class\") '")
+							.append(e.get(ATTRIBUTES.CONTAINER_CLASS))
+							.append("' à laquelle fait référence une aggrégation est inconnue.");
+
+						break;
+
+					case UNKNOWN_AGGREGATION_PART_CLASS:
+						sb.append("La classe partie (\"part class\") '")
+						.append(e.get(ATTRIBUTES.PART_CLASS))
+						.append("' est inconnue dans une aggrégation ayant comme contenant (\"container class\") la ")
+						.append("classe '")
+						.append(e.get(ATTRIBUTES.CONTAINER_CLASS))
+						.append("'.");
+
+						break;
+
+					case UNKNOWN_ASSOCIATION_CLASS:
+						sb.append("Une association fait référence ");
+
+						if(null == e.get(ATTRIBUTES.SECOND_CLASS))
 						{
-							case DUPLICATE:
-								sb.append("La classe ").append(e.getDetails()).append(" est définie plus d'une fois.");
+							sb.append(" à la classe '")
+								.append(e.get(ATTRIBUTES.FIRST_CLASS))
+								.append("' qui n'existe pas.");
+						}
+						else
+						{
+							sb.append(" aux classes '")
+							.append(e.get(ATTRIBUTES.FIRST_CLASS))
+							.append("' et '")
+							.append(e.get(ATTRIBUTES.SECOND_CLASS))
+							.append("' qui n'existent pas.");
 						}
 
+						break;
+
+					case UNKNOWN_GENERALIZATION_SUBCLASS:
+						sb.append("La sous-classe '")
+							.append(e.get(ATTRIBUTES.SUBCLASS))
+							.append("' n'existe pas dans la généralisation ayant '")
+							.append(e.get(ATTRIBUTES.SUPERCLASS))
+							.append("' comme super-classe.");
+
+						break;
+
+					case UNKNOWN_GENERALIZATION_SUPERCLASS:
+						sb.append("Une généralisation fait référence à la super-classe '")
+							.append(e.get(ATTRIBUTES.SUPERCLASS))
+							.append("' qui n'existe pas.");
+
+						break;
+
+					default:
 						break;
 				}
 

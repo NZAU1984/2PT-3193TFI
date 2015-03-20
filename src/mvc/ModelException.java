@@ -1,4 +1,7 @@
 package mvc;
+
+import java.util.HashMap;
+
 /*
  * Section:
  * 	- Class
@@ -24,57 +27,83 @@ package mvc;
  */
 public class ModelException extends Exception
 {
-	public static enum SECTION
+	public static enum ERRORS
 	{
-		CLASS,
-		ATTRIBUTE,
-		METHOD,
-		SUPERCLASS,
-		SUBCLASS,
-		INHERITANCE,
+		DUPLICATE_ASSOCIATION,
+		DUPLICATE_ATTRIBUTE,
+		DUPLICATE_CLASS,
+		DUPLICATE_OPERATION,
+		INHERITANCE_CYCLE,
+		UNKNOWN_AGGREGATION_CONTAINER_CLASS,
+		UNKNOWN_AGGREGATION_PART_CLASS,
+		UNKNOWN_ASSOCIATION_CLASS,
+		UNKNOWN_GENERALIZATION_SUBCLASS,
+		UNKNOWN_GENERALIZATION_SUPERCLASS,
+		;
+	}
+
+	public static enum ATTRIBUTES
+	{
 		ASSOCIATION,
-		AGGREGATION;
+		ATTRIBUTE,
+		CLASS,
+		CONTAINER_CLASS,
+		FIRST_CLASS,
+		SECOND_CLASS,
+		OPERATION_NAME,
+		OPERATION_SIGNATURE,
+		OPERATION_TYPE,
+		PART_CLASS,
+		SUBCLASS,
+		SUPERCLASS,
+		;
 	}
 
-	public static enum TYPE
+	protected final ERRORS error;
+
+	protected HashMap<ATTRIBUTES, String> attributeMap;
+
+	public ModelException(ERRORS error)
 	{
-		DUPLICATE,
-		UNKNOWN,
-		UNKNOWN_CONTAINER,
-		UNKWNON_PART,
-		CYCLE
+		this(error, null);
 	}
 
-	protected final SECTION section;
-	protected final TYPE type;
-	protected final String details;
-
-	public ModelException(SECTION section, TYPE type, String details)
-	{
-		this(section, type, details, null);
-	}
-
-	public ModelException(SECTION section, TYPE type, String details, String message)
+	public ModelException(ERRORS error, String message)
 	{
 		super(message);
 
-		this.section	= section;
-		this.type		= type;
-		this.details	= details;
+		this.error	= error;
 	}
 
-	public SECTION getSection()
+	public ModelException set(ATTRIBUTES attribute, String value)
 	{
-		return section;
+		createMap();
+
+		attributeMap.put(attribute, value);
+
+		return this;
 	}
 
-	public TYPE getType()
+	public ERRORS getError()
 	{
-		return type;
+		return error;
 	}
 
-	public String getDetails()
+	public String get(ATTRIBUTES attribute)
 	{
-		return details;
+		if(null == attributeMap)
+		{
+			return null;
+		}
+
+		return attributeMap.get(attribute);
+	}
+
+	protected void createMap()
+	{
+		if(null == attributeMap)
+		{
+			attributeMap	= new HashMap<ATTRIBUTES, String>();
+		}
 	}
 }
