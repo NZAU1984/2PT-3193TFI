@@ -27,8 +27,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import mvc.Controller;
-import mvc.ErrorCenter;
-import mvc.ErrorCenter.Error;
 import mvc.ListContainer;
 
 public class MainWindow	extends JFrame implements Observer
@@ -439,13 +437,13 @@ public class MainWindow	extends JFrame implements Observer
 			return;
 		}
 
-		if(arg instanceof mvc.ErrorCenter.Error)
+		/*if(arg instanceof mvc.ErrorCenter.Error)
 		{
 			Error error			= (Error) arg;
 			String errorMessage	= "";
 
 			/* Pseudoswitch because Java 6 can't switch on longs and even though it's always the same at the moment,
-			 * someone may want to handle each error type differently. */
+			 * someone may want to handle each error type differently. * /
 			if(error.number == ErrorCenter.INVALID_FILE)
 			{
 				errorMessage	= error.message;
@@ -462,7 +460,8 @@ public class MainWindow	extends JFrame implements Observer
 
 			JOptionPane.showMessageDialog(this, errorMessage, "Erreur", JOptionPane.ERROR_MESSAGE);
 		}
-		else if(arg instanceof ListContainer)
+		else */
+		if(arg instanceof ListContainer)
 		{
 			ListContainer listContainer	= (ListContainer) arg;
 

@@ -33,11 +33,6 @@ public class Model extends Observable
 	protected UmlParser umlParser;
 
 	/**
-	 * The {@link ErrorCenter} used to send {@link mvc.ErrorCenter.Error}'s to observers.
-	 */
-	protected ErrorCenter errorCenter;
-
-	/**
 	 * The {@link uml_parser.Model} used to get the contents of a parser UML schema.
 	 */
 	protected uml_parser.Model umlModel;
@@ -56,7 +51,6 @@ public class Model extends Observable
 	public Model()
 	{
 		umlParser	= UmlParser.getInstance();
-		errorCenter	= new ErrorCenter();
 	}
 
 	public void analyseFile(String filename) throws ModelException
@@ -69,11 +63,15 @@ public class Model extends Observable
 		}
 		catch (IOException e)
 		{
-			sendError(ErrorCenter.INVALID_FILE);
+			throw resetAndReturnException(ERRORS.INVALID_FILE);
+
+			//sendError(ErrorCenter.INVALID_FILE);
 		}
 		catch (ParsingFailedException e)
 		{
-			sendError(ErrorCenter.PARSING_FAILED);
+			throw resetAndReturnException(ERRORS.PARSING_FAILED);
+
+			//sendError(ErrorCenter.PARSING_FAILED);
 		}
 
 		this.filename	= filename;
@@ -134,18 +132,6 @@ public class Model extends Observable
 	}
 
 	// PROTECTED METHODS
-
-	protected void sendError(long errorNumber)
-	{
-		sendError(errorNumber, null);
-	}
-
-	protected void sendError(long errorNumber, String details)
-	{
-		setChanged();
-
-		notifyObservers(errorCenter.newError(errorNumber, details));
-	}
 
 	protected ClassContainer getClass(String name)
 	{
