@@ -47,7 +47,7 @@ public class GeneralizationCollector extends Collector implements Generalization
 	}
 
 	@Override
-	public String getIdentifier()
+	public String getSuperclassName()
 	{
 		return identifier;
 	}
@@ -69,7 +69,7 @@ public class GeneralizationCollector extends Collector implements Generalization
 		StringBuilder sb	= new StringBuilder();
 
 		sb.append("Generalization{")
-			.append(getIdentifier())
+			.append(getSuperclassName())
 			.append(" : {")
 			.append(identifierListCollector)
 			.append("}");

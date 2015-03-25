@@ -16,7 +16,7 @@ public interface Generalization
 	 *
 	 * @return	The identifier.
 	 */
-	public String getIdentifier();
+	public String getSuperclassName();
 
 	public String[] getSubclassNames();
 

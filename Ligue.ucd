@@ -42,6 +42,7 @@ GENERALIZATION Participant
 	SUBCLASSES Joueur, Entraineur
 ;
 
+
 RELATION est_localisee_a 
        ROLES
        CLASS Equipe MANY,

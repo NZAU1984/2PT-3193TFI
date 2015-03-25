@@ -64,6 +64,8 @@ public class Controller
 			}
 			catch (ModelException e)
 			{
+				// TODO parsingFailed et cie...
+				e.printStackTrace();
 				StringBuilder sb	= new StringBuilder();
 
 				switch(e.getError())
