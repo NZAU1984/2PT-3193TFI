@@ -27,7 +27,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import mvc.Controller;
-import mvc.ListContainer;
+import mvc.models.ListContainer;
 
 public class MainWindow	extends JFrame implements Observer
 {

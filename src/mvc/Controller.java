@@ -4,7 +4,9 @@ import java.io.File;
 
 import javax.swing.JFileChooser;
 
-import mvc.ModelException.ATTRIBUTES;
+import mvc.models.Model;
+import mvc.models.ModelException;
+import mvc.models.ModelException.ATTRIBUTES;
 import mvc.views.MainWindow;
 
 public class Controller

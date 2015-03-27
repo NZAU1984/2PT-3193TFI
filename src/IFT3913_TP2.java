@@ -1,7 +1,7 @@
 import java.io.IOException;
 
 import mvc.Controller;
-import mvc.Model;
+import mvc.models.Model;
 import mvc.views.MainWindow;
 
 public class IFT3913_TP2

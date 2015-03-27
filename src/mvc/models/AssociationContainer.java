@@ -1,9 +1,9 @@
-package mvc;
+package mvc.models;
 
 import uml_parser.Association;
 
 
-public class AssociationContainer
+class AssociationContainer
 {
 	public final Association association;
 

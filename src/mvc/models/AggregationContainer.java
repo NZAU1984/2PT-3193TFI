@@ -1,8 +1,8 @@
-package mvc;
+package mvc.models;
 
 import uml_parser.Aggregation;
 
-public class AggregationContainer
+class AggregationContainer
 {
 	public final Aggregation aggregation;
 

@@ -1,4 +1,4 @@
-package mvc;
+package mvc.models;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -9,14 +9,12 @@ import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Observable;
 
-import mvc.ModelException.ATTRIBUTES;
-import mvc.ModelException.ERRORS;
+import mvc.models.ModelException.ATTRIBUTES;
+import mvc.models.ModelException.ERRORS;
 import uml_parser.Aggregation;
 import uml_parser.Association;
 import uml_parser.ClassContent;
-import uml_parser.Dataitem;
 import uml_parser.Generalization;
-import uml_parser.Operation;
 import uml_parser.ParsingFailedException;
 import uml_parser.Role;
 import uml_parser.UmlParser;
@@ -195,22 +193,31 @@ public class Model extends Observable
 		/* This will reset the property if it previously contained data. */
 		classes	= new HashMap<String, ClassContainer>();
 
-		/* Creates classes and for each class, it will create attributes and methods (operaitons). A ModelException will
-		 * be thrown if any of the following occurs:
-		 * - Duplicate class name
-		 * - Duplicate attribute name in a specific class
-		 * - Duplicate method (operation) name/signature. */
-		createAndCheckClasses();
+		try
+		{
+			/* Creates classes and for each class, it will create attributes and methods (operaitons). A ModelException will
+			 * be thrown if any of the following occurs:
+			 * - Duplicate class name
+			 * - Duplicate attribute name in a specific class
+			 * - Duplicate method (operation) name/signature. */
+			createAndCheckClasses();
 
-		/* Links superclasses with their subclasses. Throws an error if any of the classes does not exist or an
-		 * inheritance cycle is detected. */
-		createAndCheckGeneralizations();
+			/* Links superclasses with their subclasses. Throws an error if any of the classes does not exist or an
+			 * inheritance cycle is detected. */
+			createAndCheckGeneralizations();
 
-		/* Links classes through defined associations. */
-		createAndCheckAssociations();
+			/* Links classes through defined associations. */
+			createAndCheckAssociations();
 
-		/* Links classes through defined aggregations. */
-		createAndCheckAggregations();
+			/* Links classes through defined aggregations. */
+			createAndCheckAggregations();
+		}
+		catch(ModelException e)
+		{
+			resetModel();
+
+			throw e;
+		}
 
 		/* Below: let's loop through all classes and build caches and add their name to an ArrayList so we can sort them
 		 * and send them to observers (the view). */
@@ -548,397 +555,5 @@ public class Model extends Observable
 		classes.clear();
 
 		classes		= null;
-	}
-
-	// PRIVATE INNER CLASSES
-
-	private class ClassContainer
-	{
-		// PROTECTED PROPERTIES
-		protected ClassContent	classContent;
-
-		protected ArrayList<ClassContainer> superClasses;
-
-		protected ArrayList<ClassContainer> subClasses;
-
-		protected HashMap<String, String> attributes;
-
-		protected HashMap<String, ArrayList<OperationContainer>> operations;
-
-		protected HashMap<String, AssociationContainer> associations;
-
-		protected ArrayList<AggregationContainer> aggregations;
-
-		protected String[] attributesCache;
-		protected String[] operationsCache;
-		protected String[] subclassesCache;
-		protected String[] superclassesCache;
-		protected mvc.AssociationContainer[] associationsCache;
-		protected mvc.AggregationContainer[] aggregationsCache;
-
-		protected ClassContainer(ClassContent classContent) throws ModelException
-		{
-			this.classContent	= classContent;
-
-			superClasses	= new ArrayList<ClassContainer>();
-			subClasses		= new ArrayList<ClassContainer>();
-			attributes		= new HashMap<String, String>();
-			operations		= new HashMap<String, ArrayList<OperationContainer>>();
-			associations	= new HashMap<String, AssociationContainer>();
-			aggregations	= new ArrayList<Model.AggregationContainer>();
-
-			/* Creates and checks attributes. A ModelException is thrown if a duplicate attribute name is found. */
-			createAndCheckAttributes();
-
-			/* Creates and checks methods (operations). A ModelException is thrown if a duplicate operation
-			 * name/signature is found. */
-			createAndCheckOperations();
-		}
-
-		@Override
-		public String toString()
-		{
-			return classContent.getIdentifier();
-		}
-
-		/**
-		 * Adds a superclass to the list of superclasses.
-		 *
-		 * @param superClass	The instance of the superclass.
-		 */
-		protected void addSuperclass(ClassContainer superClass)
-		{
-			if(superClasses.contains(superClass))
-			{
-				/* If superclass already defined, let's simply exit. Let's not throw an exception. */
-
-				return;
-			}
-
-			superClasses.add(superClass);
-		}
-
-		/**
-		 * Adds a subclass to the list of subclasses.
-		 *
-		 * @param subClass	The instance of the subclass.
-		 */
-		protected void addSubclass(ClassContainer subClass)
-		{
-			if(subClasses.contains(subClass))
-			{
-				/* If subclass already defined, let's simply exit. Let's not throw an exception. */
-
-				return;
-			}
-
-			subClasses.add(subClass);
-		}
-
-		protected void addAttribute(String name, String type) throws DuplicateException
-		{
-			if(attributes.containsKey(name))
-			{
-				throw new DuplicateException();
-			}
-
-			attributes.put(name, type);
-		}
-
-		protected void addOperation(String name, String type, String signature) throws DuplicateException
-		{
-			ArrayList<OperationContainer> ocArrayList	= null;
-			OperationContainer operationContainer		= new OperationContainer(type, signature);
-
-			if(operations.containsKey(name))
-			{
-				ocArrayList	= operations.get(name);
-
-				for(OperationContainer otherOperation : ocArrayList)
-				{
-					if(otherOperation.isSignatureIdentical(operationContainer))
-					{
-						throw new DuplicateException();
-					}
-				}
-			}
-			else
-			{
-				ocArrayList	= new ArrayList<OperationContainer>();
-
-				operations.put(name, ocArrayList);
-			}
-
-			ocArrayList.add(operationContainer);
-		}
-
-		protected void addAssociation(Association association, String name, String with, String multiplicity)
-				throws DuplicateException
-		{
-			if(associations.containsKey(name))
-			{
-				throw new DuplicateException();
-			}
-
-			associations.put(name, new AssociationContainer(association, with, multiplicity));
-		}
-
-		protected void addAggregation(Aggregation aggregation, boolean isContainer, String details)
-		{
-			aggregations.add(new AggregationContainer(aggregation, isContainer, details));
-		}
-
-		// CREATORS/CHECKERS
-
-		protected void createAndCheckAttributes() throws ModelException
-		{
-			for(Dataitem attribute : classContent.getAttributes())
-			{
-				try
-				{
-					addAttribute(attribute.getIdentifier(), attribute.getType());
-				}
-				catch (DuplicateException e)
-				{
-					throw resetAndReturnException(ERRORS.DUPLICATE_ATTRIBUTE)
-						.set(ATTRIBUTES.ATTRIBUTE, attribute.getIdentifier())
-						.set(ATTRIBUTES.CLASS, getName());
-				}
-			}
-		}
-
-		protected void createAndCheckOperations() throws ModelException
-		{
-			for(Operation operation : classContent.getOperations())
-			{
-				StringBuilder signatureSb	= new StringBuilder();
-				Dataitem[] attributes		= operation.getAttributes();
-
-				for(int i = 0, iMax = attributes.length; i < iMax; ++i)
-				{
-					if(0 != i)
-					{
-						signatureSb.append(", ");
-					}
-
-					signatureSb.append(attributes[i].getType());
-				}
-
-				try
-				{
-					addOperation(operation.getIdentifier(), operation.getType(), signatureSb.toString());
-				}
-				catch (DuplicateException e)
-				{
-					throw resetAndReturnException(ERRORS.DUPLICATE_OPERATION)
-						.set(ATTRIBUTES.OPERATION_NAME, operation.getIdentifier())
-						.set(ATTRIBUTES.OPERATION_TYPE, operation.getType())
-						.set(ATTRIBUTES.OPERATION_SIGNATURE, signatureSb.toString())
-						.set(ATTRIBUTES.CLASS, getName());
-				}
-			}
-		}
-
-		// GETTERS
-
-		protected String getName()
-		{
-			return classContent.getIdentifier();
-		}
-
-		protected ClassContainer[] getParents()
-		{
-			return superClasses.toArray(new ClassContainer[superClasses.size()]);
-		}
-
-		protected void buildCaches()
-		{
-			if((null == attributes) || (null == operations) || (null == subClasses) || (null == superClasses))
-			{
-				return;
-			}
-
-			{
-				ArrayList<String> temp	= new ArrayList<String>();
-
-
-				Iterator<Entry<String, String>>	iterator = attributes.entrySet().iterator();
-
-				while(iterator.hasNext())
-				{
-					Entry<String, String> val	= iterator.next();
-
-					temp.add(val.getValue() + " " + val.getKey());
-				}
-
-				Collections.sort(temp);
-
-				attributesCache	= temp.toArray(new String[temp.size()]);
-
-				attributes.clear();
-
-				attributes	= null;
-			}
-
-			{
-				ArrayList<String> temp	= new ArrayList<String>();
-
-				Iterator<Entry<String, ArrayList<OperationContainer>>>	iterator = operations.entrySet().iterator();
-
-				while(iterator.hasNext())
-				{
-					Entry<String, ArrayList<OperationContainer>> val	= iterator.next();
-
-					String opName	= val.getKey();
-
-					for(OperationContainer oc : val.getValue())
-					{
-						temp.add(oc.type + " " + opName + "(" + oc.signature + ")");
-					}
-				}
-
-				Collections.sort(temp);
-
-				operationsCache	= temp.toArray(new String[temp.size()]);
-
-				operations.clear();
-
-				operations	= null;
-			}
-
-			{
-				ArrayList<String>	temp	= new ArrayList<String>();
-
-				for(ClassContainer currentClass : subClasses)
-				{
-					temp.add(currentClass.getName());
-				}
-
-				subclassesCache	= temp.toArray(new String[temp.size()]);
-
-				subClasses.clear();
-
-				subClasses	= null;
-			}
-
-			{
-				ArrayList<String>	temp	= new ArrayList<String>();
-
-				for(ClassContainer currentClass : superClasses)
-				{
-					temp.add(currentClass.getName());
-				}
-
-				superclassesCache	= temp.toArray(new String[temp.size()]);
-
-				superClasses.clear();
-
-				superClasses	= null;
-			}
-
-			{
-				ArrayList<mvc.AssociationContainer> temp	= new ArrayList<mvc.AssociationContainer>();
-
-				Iterator<Entry<String, AssociationContainer>>	iterator = associations.entrySet().iterator();
-
-				while(iterator.hasNext())
-				{
-					Entry<String, AssociationContainer> val	= iterator.next();
-
-					temp.add(new mvc.AssociationContainer(val.getValue().association, val.getKey()));
-				}
-
-				associationsCache	= temp.toArray(new mvc.AssociationContainer[temp.size()]);
-
-				// TODO clear associations + NULL
-			}
-
-			{
-				ArrayList<mvc.AggregationContainer> temp	= new ArrayList<mvc.AggregationContainer>();
-
-				for(AggregationContainer ac : aggregations)
-				{
-					temp.add(new mvc.AggregationContainer(ac.aggregation,
-							(ac.isContainer ? "Contient : " : "Partie de : ") + ac.details));
-				}
-
-				aggregationsCache	= temp.toArray(new mvc.AggregationContainer[temp.size()]);
-
-				// TODO clear aggregations + NULL
-			}
-		}
-
-		public String[] getAttributes()
-		{
-			if(null == attributesCache)
-			{
-				buildCaches();
-			}
-
-			return attributesCache;
-		}
-	}
-
-	private class OperationContainer
-	{
-		protected final String type;
-
-		protected final String signature;
-
-		protected OperationContainer(String type, String signature)
-		{
-			this.type		= type;
-			this.signature	= signature;
-		}
-
-		protected boolean isSignatureIdentical(OperationContainer oc)
-		{
-			return signature.equals(oc.signature);
-		}
-	}
-
-	private class AssociationContainer
-	{
-		protected final Association association;
-
-		protected final String with;
-
-		protected final String multiplicity;
-
-		protected AssociationContainer(Association association, String with, String multiplicity)
-		{
-			this.association	= association;
-			this.with			= with;
-			this.multiplicity	= multiplicity;
-		}
-	}
-
-	private class AggregationContainer
-	{
-		protected final Aggregation	aggregation;
-
-		protected final boolean isContainer;
-
-		protected final String details;
-
-		private AggregationContainer(Aggregation aggregation, boolean isContainer, String details)
-		{
-			this.aggregation	= aggregation;
-			this.isContainer	= isContainer;
-			this.details		= details;
-		}
-	}
-
-	private class DuplicateException extends Exception
-	{
-		protected DuplicateException()
-		{
-			super();
-		}
-
-		protected DuplicateException(String message)
-		{
-			super(message);
-		}
 	}
 }
