@@ -1,0 +1,36 @@
+MODEL Ligue
+CLASS A 
+ATTRIBUTES 
+      AAA : String
+OPERATIONS
+      A(a : A, b : B, c : C, d : D, i : Integer) : Integer
+;
+
+CLASS B
+ATTRIBUTES 
+      AAA : String
+OPERATIONS
+      A(b : B) : Integer
+;
+
+CLASS C 
+ATTRIBUTES 
+      
+OPERATIONS
+      JJ(b : B) : Integer
+;
+
+CLASS D
+ATTRIBUTES 
+      
+OPERATIONS
+      
+;
+
+GENERALIZATION B
+      SUBCLASSES D, C
+;
+
+GENERALIZATION A
+      SUBCLASSES B
+;

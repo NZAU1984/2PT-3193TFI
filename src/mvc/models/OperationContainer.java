@@ -34,9 +34,19 @@ class OperationContainer
 		signature	= formatSignature(operation);
 	}
 
+	String getName()
+	{
+		return operation.getIdentifier();
+	}
+
 	String getType()
 	{
 		return operation.getType();
+	}
+
+	String getSignature()
+	{
+		return signature;
 	}
 
 	Dataitem[] getAttributes()
@@ -52,5 +62,11 @@ class OperationContainer
 	boolean isSignatureIdentical(OperationContainer oc)
 	{
 		return signature.equals(oc.signature);
+	}
+
+	boolean equals(OperationContainer oc)
+	{
+		System.out.println("== EQUALS ==");
+		return operation.getIdentifier().equals(oc.operation.getIdentifier()) && isSignatureIdentical(oc);
 	}
 }

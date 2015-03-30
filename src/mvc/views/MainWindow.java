@@ -255,7 +255,7 @@ public class MainWindow	extends JFrame implements Observer
 		mainPanel.add(associationPanel, c1);
 
 		JPanel aggregationPanel	= new JPanel(new BorderLayout());
-		aggregationPanel.setBorder(BorderFactory.createTitledBorder("Aggrégations"));
+		aggregationPanel.setBorder(BorderFactory.createTitledBorder("Agrégations"));
 
 		aggregationList	= new JList<String>();
 

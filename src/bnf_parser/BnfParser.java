@@ -20,16 +20,28 @@ public class BnfParser
 {
 	// PUBLIC STATIC CONSTANTS
 
+	/**
+	 * UTF-8 encoding.
+	 */
 	public static final String	UTF8_ENCODING	= "UTF-8";
 
+	/**
+	 * Latin1 encoding.
+	 */
 	public static final String LATIN_1_ENCODING	= "ISO-8859-1";
 
 	// PROTECTED PROPERTIES
 
+	/**
+	 * The instance of {@link Subparser}.
+	 */
 	protected Subparser subparser;
 
 	// PUBLIC CONSTRUCTORS
 
+	/**
+	 * Default constructor.
+	 */
 	public BnfParser()
 	{
 		subparser	= new Subparser();
@@ -37,31 +49,48 @@ public class BnfParser
 
 	// PUBLIC METHODS
 
+	/**
+	 * Open the specified {@code filename} using the specified {@code charset}.
+	 *
+	 * @param filename		The path of the file to be opened.
+	 * @param charset		The charset to use to open the file.
+	 * @throws IOException	Thrown whenever an error occurs while opening the file.
+	 */
 	public void open(String filename, String charset) throws IOException
 	{
 		subparser.open(filename, charset);
 	}
 
+	/**
+	 * Closes the current opened file.
+	 */
 	public void close()
 	{
 		subparser.close();
 	}
 
+	/**
+	 * Returns a new empty {@link Rule}.
+	 *
+	 * @return
+	 */
 	public Rule newRule()
 	{
 		return new Rule();
 	}
 
-	// TODO redo Javadoc
 	/**
-	 * Evaluates the specified rule. In case of success, returns a new collector whose multiplicity was specified when creating
-	 * the rule, including null if none was specified. Throws a 'ParsingFailedException' if any part of the rule
-	 * fails parsing.
-	 * @param ruleName The name of the rule to be evaluated.
-	 * @return
-	 * @throws ParsingFailedException
-	 * @throws CallableContainsMoreThanOneCollectorException
-	 * @throws ModelException
+	 * Evaluates the specified {@link Rule}.
+	 *
+	 * @param rule	The {@link Rule} to be evaluated.
+	 *
+	 * @return	 A new instance of the {@link Collector} of the {@link Rule} if one was defined. Returns NULL if the
+	 * 		{@link Rule} does not have a collector.
+	 *
+	 * @throws ParsingFailedException							Throw if the evaluation of the {@link Rule} fails.
+	 * @throws CallableContainsMoreThanOneCollectorException	Thrown if a {@link Callable} contains more than one
+	 * 															{@link Collector}.
+	 * @throws NoFileSpecifiedException							Thrown if parsing occurs before the file was specified.
 	 */
 	public Collector evaluateRule(Rule rule)
 			throws ParsingFailedException, CallableContainsMoreThanOneCollectorException, NoFileSpecifiedException
@@ -102,6 +131,11 @@ public class BnfParser
 			}
 
 			// http://www.java-tips.org/java-se-tips/java.util.regex/how-to-apply-regular-expressions-on-the-contents-of-a.html
+			/* Below, we use a CharBuffer to read the file. It allows to use string functions with having to explicitly
+			 * move the cursor. It also loads as much characters as it needs. Also, with regular expression, it reads
+			 * as many characters as needed. If a pattern matches a short string, it doesn't have to read lots and lots
+			 * of characters. The only thing is that at any time, it cannot contain more than 'fileChannel.size()'
+			 * which is about 2gb, which, here, is way enough! */
 			File file				= new File(filename);
 			fileCharset				= charset;
 			fileSize				= file.length();
@@ -239,6 +273,7 @@ public class BnfParser
 
 		/**
 		 * Sets the buffer position.
+		 *
 		 * @param position
 		 */
 		protected void setBufferPosition(int position)
@@ -269,10 +304,12 @@ public class BnfParser
 		}
 
 		/**
-		 * Returns the total number of bytes in a string. Many encodings such
+		 * Returns the total number of bytes in a {@link SubSequebce}. Many encodings such as UTF-8 sometimes use more
+		 * than one byte to create a character. This method is used to calculate offset in the file.
 		 *
-		 * @param sequence
-		 * @return
+		 * @param sequence	The {@link CharSequence} from which return the length.
+		 *
+		 * @return	The length of the sequence.
 		 */
 		protected int length(CharSequence sequence)
 		{

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map.Entry;
 
 import mvc.models.ModelException.ATTRIBUTES;
@@ -21,17 +22,20 @@ import uml_parser.Operation;
 		// PROTECTED PROPERTIES
 		protected ClassContent	classContent;
 
-		protected ArrayList<ClassContainer> superClasses;
+		protected ArrayList<ClassContainer> superclasses;
 
-		protected ArrayList<ClassContainer> subClasses;
+		protected ArrayList<ClassContainer> subclasses;
 
 		protected HashMap<String, String> attributes;
 
 		protected HashMap<String, ArrayList<OperationContainer>> operations;
 
-		protected HashMap<String, AssociationContainer111> associations;
+		protected HashMap<String, InnerAssociationContainer> associations;
 
-		protected ArrayList<AggregationContainer111> aggregations;
+		protected ArrayList<InnerAggregationContainer> aggregations;
+
+		protected String[] attributeNamesCache;
+		protected ClassContainer[] allSuperclassesCache;
 
 		protected String[] attributesCache;
 		protected String[] operationsCache;
@@ -40,16 +44,18 @@ import uml_parser.Operation;
 		protected AssociationContainer[] associationsCache;
 		protected AggregationContainer[] aggregationsCache;
 
+		protected Metrics metrics;
+
 		protected ClassContainer(ClassContent classContent) throws ModelException
 		{
 			this.classContent	= classContent;
 
-			superClasses	= new ArrayList<ClassContainer>();
-			subClasses		= new ArrayList<ClassContainer>();
+			superclasses	= new ArrayList<ClassContainer>();
+			subclasses		= new ArrayList<ClassContainer>();
 			attributes		= new HashMap<String, String>();
 			operations		= new HashMap<String, ArrayList<OperationContainer>>();
-			associations	= new HashMap<String, AssociationContainer111>();
-			aggregations	= new ArrayList<AggregationContainer111>();
+			associations	= new HashMap<String, InnerAssociationContainer>();
+			aggregations	= new ArrayList<InnerAggregationContainer>();
 
 			/* Creates and checks attributes. A ModelException is thrown if a duplicate attribute name is found. */
 			createAndCheckAttributes();
@@ -70,16 +76,16 @@ import uml_parser.Operation;
 		 *
 		 * @param superClass	The instance of the superclass.
 		 */
-		protected void addSuperclass(ClassContainer superClass)
+		void addSuperclass(ClassContainer superClass)
 		{
-			if(superClasses.contains(superClass))
+			if(superclasses.contains(superClass))
 			{
 				/* If superclass already defined, let's simply exit. Let's not throw an exception. */
 
 				return;
 			}
 
-			superClasses.add(superClass);
+			superclasses.add(superClass);
 		}
 
 		/**
@@ -87,16 +93,16 @@ import uml_parser.Operation;
 		 *
 		 * @param subClass	The instance of the subclass.
 		 */
-		protected void addSubclass(ClassContainer subClass)
+		void addSubclass(ClassContainer subClass)
 		{
-			if(subClasses.contains(subClass))
+			if(subclasses.contains(subClass))
 			{
 				/* If subclass already defined, let's simply exit. Let's not throw an exception. */
 
 				return;
 			}
 
-			subClasses.add(subClass);
+			subclasses.add(subClass);
 		}
 
 		protected void addAttribute(String name, String type) throws DuplicateException
@@ -138,7 +144,7 @@ import uml_parser.Operation;
 			ocArrayList.add(operationContainer);
 		}
 
-		protected void addAssociation(Association association, String name, String with, String multiplicity)
+		void addAssociation(Association association, String name, String with, String multiplicity)
 				throws DuplicateException
 		{
 			if(associations.containsKey(name))
@@ -146,12 +152,29 @@ import uml_parser.Operation;
 				throw new DuplicateException();
 			}
 
-			associations.put(name, new AssociationContainer111(association, with, multiplicity));
+			associations.put(name, new InnerAssociationContainer(association, with, multiplicity));
 		}
 
-		protected void addAggregation(Aggregation aggregation, boolean isContainer, String details)
+		void addAggregation(Aggregation aggregation, boolean isContainer, String details)
 		{
-			aggregations.add(new AggregationContainer111(aggregation, isContainer, details));
+			aggregations.add(new InnerAggregationContainer(aggregation, isContainer, details));
+		}
+
+		/**
+		 * Calculates different metrics. Creates an instance of {@link Metrics}.
+		 */
+		void calculateMetrics()
+		{
+			if(null != metrics)
+			{
+				/* Metrics already calculated. */
+
+				return;
+			}
+
+			metrics	= new Metrics(this);
+
+			metrics.calculate();
 		}
 
 		// CREATORS/CHECKERS
@@ -200,14 +223,139 @@ import uml_parser.Operation;
 			return classContent.getIdentifier();
 		}
 
-		protected ClassContainer[] getParents()
+		protected Operation[] getOperations()
 		{
-			return superClasses.toArray(new ClassContainer[superClasses.size()]);
+			return classContent.getOperations();
 		}
+
+		ClassContainer[] getSuperclasses()
+		{
+			return superclasses.toArray(new ClassContainer[superclasses.size()]);
+		}
+
+		ClassContainer[] getAllSuperclasses()
+		{
+			if(null != allSuperclassesCache)
+			{
+				return allSuperclassesCache;
+			}
+
+			LinkedList<ClassContainer> allSuperclasses	= new LinkedList<ClassContainer>();
+			LinkedList<ClassContainer> classesToVisit	= new LinkedList<ClassContainer>();
+
+			for(ClassContainer superclass : superclasses)
+			{
+				classesToVisit.add(superclass);
+			}
+
+			while(0 != classesToVisit.size())
+			{
+				ClassContainer currentClass	= classesToVisit.removeFirst();
+
+				if(!allSuperclasses.contains(currentClass))
+				{
+					allSuperclasses.add(currentClass);
+
+					if(null != currentClass.superclasses)
+					{
+					for(ClassContainer superclass : currentClass.superclasses)
+					{
+						classesToVisit.add(superclass);
+					}
+					}
+				}
+			}
+
+			allSuperclassesCache	= allSuperclasses.toArray(new ClassContainer[allSuperclasses.size()]);
+
+			return allSuperclassesCache;
+		}
+
+		ClassContainer[] getSubclasses()
+		{
+			return subclasses.toArray(new ClassContainer[subclasses.size()]);
+		}
+
+		OperationContainer[] getOperationContainers()
+		{
+			LinkedList<OperationContainer> cache	= new LinkedList<OperationContainer>();
+
+			int n	= 0;
+
+			Iterator<Entry<String, ArrayList<OperationContainer>>>	iterator = operations.entrySet().iterator();
+
+			while(iterator.hasNext())
+			{
+				Entry<String, ArrayList<OperationContainer>> val	= iterator.next();
+
+				for(OperationContainer oc : val.getValue())
+				{
+					cache.add(oc);
+
+					++n;
+				}
+			}
+
+			return cache.toArray(new OperationContainer[n]);
+		}
+
+		/**
+		 * Returns the (calculated) metrics.
+		 *
+		 * @return	The instance of {@link Metrics}.
+		 */
+		Metrics getMetrics()
+		{
+			if(null == metrics)
+			{
+				/* If not already calculated, let's calculate metrics. */
+
+				calculateMetrics();
+			}
+
+			return metrics;
+		}
+
+		// CONTAINS?
+
+		boolean containsAttribute(String name)
+		{
+			return attributes.containsKey(name);
+		}
+
+		boolean containsMethod(String name, String signature)
+		{
+			// HashMap<String, ArrayList<OperationContainer>> operations;
+			ArrayList<OperationContainer> methodSignatures	= operations.get(name);
+
+			if(null != methodSignatures)
+			{
+				for(OperationContainer oc : methodSignatures)
+				{
+					if(signature.equals(oc.getSignature()))
+					{
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
+		boolean containsMethods(OperationContainer operationContainer)
+		{
+			//return operations1.contains(operationContainer);
+
+			//ListIterator<OperationContainer>
+
+			return false;
+		}
+
+		// ...
 
 		protected void buildCaches()
 		{
-			if((null == attributes) || (null == operations) || (null == subClasses) || (null == superClasses))
+			if((null == attributes) || (null == operations) || (null == subclasses) || (null == superclasses))
 			{
 				return;
 			}
@@ -263,41 +411,41 @@ import uml_parser.Operation;
 			{
 				ArrayList<String>	temp	= new ArrayList<String>();
 
-				for(ClassContainer currentClass : subClasses)
+				for(ClassContainer currentClass : subclasses)
 				{
 					temp.add(currentClass.getName());
 				}
 
 				subclassesCache	= temp.toArray(new String[temp.size()]);
 
-				subClasses.clear();
+				subclasses.clear();
 
-				subClasses	= null;
+				subclasses	= null;
 			}
 
 			{
 				ArrayList<String>	temp	= new ArrayList<String>();
 
-				for(ClassContainer currentClass : superClasses)
+				for(ClassContainer currentClass : superclasses)
 				{
 					temp.add(currentClass.getName());
 				}
 
 				superclassesCache	= temp.toArray(new String[temp.size()]);
 
-				superClasses.clear();
+				superclasses.clear();
 
-				superClasses	= null;
+				superclasses	= null;
 			}
 
 			{
 				ArrayList<mvc.models.AssociationContainer> temp	= new ArrayList<mvc.models.AssociationContainer>();
 
-				Iterator<Entry<String, AssociationContainer111>>	iterator = associations.entrySet().iterator();
+				Iterator<Entry<String, InnerAssociationContainer>>	iterator = associations.entrySet().iterator();
 
 				while(iterator.hasNext())
 				{
-					Entry<String, AssociationContainer111> val	= iterator.next();
+					Entry<String, InnerAssociationContainer> val	= iterator.next();
 
 					temp.add(new AssociationContainer(val.getValue().association, val.getKey()));
 				}
@@ -310,7 +458,7 @@ import uml_parser.Operation;
 			{
 				ArrayList<mvc.models.AggregationContainer> temp	= new ArrayList<mvc.models.AggregationContainer>();
 
-				for(AggregationContainer111 ac : aggregations)
+				for(InnerAggregationContainer ac : aggregations)
 				{
 					temp.add(new AggregationContainer(ac.aggregation,
 							(ac.isContainer ? "Contient : " : "Partie de : ") + ac.details));
@@ -320,6 +468,33 @@ import uml_parser.Operation;
 
 				// TODO clear aggregations + NULL
 			}
+
+			// need it for name...
+			//classContent	= null;
+		}
+
+		public String[] getAttributeNames()
+		{
+			if(null != attributeNamesCache)
+			{
+				return attributeNamesCache;
+			}
+
+			int pos = 0;
+
+			attributeNamesCache	= new String[attributes.size()];
+
+			Iterator<Entry<String, String>>	iterator = attributes.entrySet().iterator();
+
+			while(iterator.hasNext())
+			{
+				Entry<String, String> val	= iterator.next();
+
+				attributeNamesCache[pos++]	= val.getKey();
+				//temp.add(val.getValue() + " " + val.getKey());
+			}
+
+			return attributeNamesCache;
 		}
 
 		public String[] getAttributes()
@@ -332,7 +507,7 @@ import uml_parser.Operation;
 			return attributesCache;
 		}
 
-		 ModelException resetAndReturnException(ModelException.ERRORS error) throws ModelException
+		ModelException resetAndReturnException(ModelException.ERRORS error) throws ModelException
 		{
 			//resetModel();
 
@@ -340,7 +515,7 @@ import uml_parser.Operation;
 		}
 	}
 
-	class AssociationContainer111
+	class InnerAssociationContainer
 	{
 		protected final Association association;
 
@@ -348,7 +523,7 @@ import uml_parser.Operation;
 
 		protected final String multiplicity;
 
-		AssociationContainer111(Association association, String with, String multiplicity)
+		InnerAssociationContainer(Association association, String with, String multiplicity)
 		{
 			this.association	= association;
 			this.with			= with;
@@ -356,7 +531,7 @@ import uml_parser.Operation;
 		}
 	}
 
-	class AggregationContainer111
+	class InnerAggregationContainer
 	{
 		protected final Aggregation	aggregation;
 
@@ -364,7 +539,7 @@ import uml_parser.Operation;
 
 		protected final String details;
 
-		AggregationContainer111(Aggregation aggregation, boolean isContainer, String details)
+		InnerAggregationContainer(Aggregation aggregation, boolean isContainer, String details)
 		{
 			this.aggregation	= aggregation;
 			this.isContainer	= isContainer;

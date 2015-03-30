@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Observable;
 
@@ -173,6 +172,13 @@ public class Model extends Observable
 
 	// PROTECTED METHODS
 
+	/**
+	 * Returns the {@link ClassContainer} corresponding to {@code name}.
+	 *
+	 * @param name	The name of the class.
+	 *
+	 * @return	The {@link ClassContainer} if it exists, {@code null} otherwise.
+	 */
 	protected ClassContainer getClass(String name)
 	{
 		if(!classes.containsKey(name))
@@ -183,10 +189,16 @@ public class Model extends Observable
 		return classes.get(name);
 	}
 
+	/**
+	 * Transform a UML definition file into a collection of objects.
+	 *
+	 * @throws ModelException	Thrown when an error occurs.
+	 */
 	protected void analyseModel() throws ModelException
 	{
 		if(null == umlModel)
 		{
+			/* Should not happen, but NullPointerException is not our friend. */
 			return;
 		}
 
@@ -222,21 +234,40 @@ public class Model extends Observable
 		/* Below: let's loop through all classes and build caches and add their name to an ArrayList so we can sort them
 		 * and send them to observers (the view). */
 
-		ArrayList<String> classNames						= new ArrayList<String>();
-		Iterator<Entry<String, ClassContainer>>	iterator	= getClassIterator();
-
-		while(iterator.hasNext())
 		{
-			ClassContainer classContainer = getClassContainerFromIterator(iterator);
+			ClassContainer[] allClasses	= classes.values().toArray(new ClassContainer[classes.size()]);
 
-			classContainer.buildCaches();
+			Metrics.resetAndPrecalculate(allClasses);
 
-			classNames.add(classContainer.getName());
+			Iterator<Entry<String, ClassContainer>>	iterator	= getClassIterator();
+
+			while(iterator.hasNext())
+			{
+				ClassContainer classContainer = getClassContainerFromIterator(iterator);
+
+				classContainer.calculateMetrics();
+			}
 		}
 
-		Collections.sort(classNames);
+		{
+			ArrayList<String> classNames						= new ArrayList<String>();
+			Iterator<Entry<String, ClassContainer>>	iterator	= getClassIterator();
 
-		sendList(ListContainer.CLASS_LIST, classNames.toArray(new String[classNames.size()]));
+			while(iterator.hasNext())
+			{
+				ClassContainer classContainer = getClassContainerFromIterator(iterator);
+
+				//classContainer.calculateMetrics();
+
+				classContainer.buildCaches();
+
+				classNames.add(classContainer.getName());
+			}
+
+			Collections.sort(classNames);
+
+			sendList(ListContainer.CLASS_LIST, classNames.toArray(new String[classNames.size()]));
+		}
 	}
 
 	/**
@@ -324,9 +355,7 @@ public class Model extends Observable
 	}
 
 	/**
-	 * Checks whether or not a cycle exists in a class inheritance. It starts from the specified {@link ClassContainer}
-	 * and grab all of its immediate parents.  For each of its parents, it grabs that parent's parents and checks if
-	 * the latter has already been visited, and then it grabs the parents of those parents, and so on.
+	 * Checks whether or not a cycle exists in a class inheritance.
 	 *
 	 * @param startingClass	The class to start from.
 	 *
@@ -334,43 +363,56 @@ public class Model extends Observable
 	 */
 	protected boolean classContainsInheritanceCycle(ClassContainer startingClass)
 	{
-		/* Let's use a HashMap to check of one class has already been visited. More efficiant than checking if
-		 * an ArrayList or LinkedList contains an entry. */
-		HashMap<String, Boolean> visitedClasses	= new HashMap<String, Boolean>();
-
-		/* Let's use a LinkedList to store classes to visit. We will always visit the first item which allows an access
-		 * complexity of O(1). Would be more memory-efficient if it was a single linked list... */
-		LinkedList<ClassContainer> classesToVisit	= new LinkedList<ClassContainer>();
-
-		/* Let's start from the current class. */
-		classesToVisit.add(startingClass);
-
-		/* Loop until there are no more classes to visit. */
-		while(0 != classesToVisit.size())
+		/* Let's use a "helper" method to which we'll pass an empty HashMap which will contain, as keys, all the visited
+		 * classes. This is a recursive process. For every class, there's a new call with each of its superclasses with
+		 * a copy (a clone) of the HashMap to mark visited classes on that path without affecting marked classes
+		 * of other paths. */
+		if(inheritancePathContainsCycle(startingClass, new HashMap<String, Boolean>()))
 		{
-			ClassContainer currentClass	= classesToVisit.removeFirst();
+			/* A cycle was detected by visiting one of the class's superclass paths. */
 
-			if(visitedClasses.containsKey(currentClass.getName()))
-			{
-				/* The item has already been visited. This means a cycle exists. Let's get out right now. */
-				return true;
-			}
-
-			/* Let's add the parents of current class to the list of classes to visit. */
-			for(ClassContainer parentClass : currentClass.getParents())
-			{
-				classesToVisit.add(parentClass);
-			}
-
-			/* Marks the current class as visited. */
-			visitedClasses.put(currentClass.getName(), true);
+			return true;
 		}
 
-		/* At this point, no cycle was detected. */
+		/* No cycle detected. */
+
 		return false;
 	}
 
-	// TODO check logic for errors in associations...
+	/**
+	 * Checks, for every supeclass of a class, if going on that inheritance path a cycle exists. For every superclass,
+	 * it calls this method again by adding the currentc class to a list of visited classes. If a superclass is
+	 * already marked as visited or visiting that class's inheritance path returns true, then a cycle exists.
+	 *
+	 * @param startingClass		The class to start from.
+	 * @param visitedClasses	A HashMap of classes already visited (keys are the names of classes).
+	 *
+	 * @return	True if a cycle exists, false otherwise.
+	 */
+	protected boolean inheritancePathContainsCycle(ClassContainer startingClass, HashMap<String, Boolean> visitedClasses)
+	{
+		/* Let's clone the HashMap. Otherwise it would always use the same object and a class could be mistakingly
+		 * marked as visited (for example, in diamond inheritance with the two paths having a different length. */
+		HashMap<String, Boolean> visitedClassesClone	= new HashMap<String, Boolean>(visitedClasses);
+
+		/* Let's mark the current class (startingClass) as visited by adding is to the HashMap. */
+		visitedClassesClone.put(startingClass.getName(), true);
+
+		for(ClassContainer superclass : startingClass.getSuperclasses())
+		{
+			/* If a superclass is already marked as visited or its inheritance contains a cycle, let's return true, a
+			 * cycle does exist. */
+			if(visitedClassesClone.containsKey(superclass.getName()) || inheritancePathContainsCycle(superclass, visitedClassesClone))
+			{
+				return true;
+			}
+		}
+
+		/* At this point, no cycle detected, let's return false. */
+
+		return false;
+	}
+
 	/**
 	 * Links two classes that are "associated" together.
 	 *
@@ -425,17 +467,24 @@ public class Model extends Observable
 
 			try
 			{
-				// TODO comment since logic SHOULD BE modified
+				/* Tries to add the association to the first class. If it already contains an association with the same
+				 * name, it throws an exception. */
 				firstClass.addAssociation(association, associationName, secondClass.getName(),
 						association.getFirstRole().getMultiplicity());
 
+				/* If no exception thrown above, we toggle this value so if an exception is detected, we'll know it came
+				 * from the second class. */
 				exceptionInFirstClass	= false;
 
+				/* Tries to add the association to the second class. If it already contains an association with the same
+				 * name, it throws an exception. */
 				secondClass.addAssociation(association, associationName, firstClass.getName(),
 						association.getSecondRole().getMultiplicity());
 			}
 			catch (DuplicateException e)
 			{
+				/* Throws the exception and specifies the class from which the error occured. */
+
 				throw resetAndReturnException(ERRORS.DUPLICATE_ASSOCIATION)
 					.set(ATTRIBUTES.ASSOCIATION, associationName)
 					.set(ATTRIBUTES.CLASS, (exceptionInFirstClass ? firstClass.getName() : secondClass.getName()));
@@ -536,7 +585,7 @@ public class Model extends Observable
 		notifyObservers(string);
 	}
 
-	protected ModelException resetAndReturnException(ModelException.ERRORS error) throws ModelException
+	protected ModelException resetAndReturnException(ModelException.ERRORS error)
 	{
 		resetModel();
 

@@ -1,0 +1,51 @@
+MODEL Ligue
+CLASS A 
+ATTRIBUTES 
+      
+OPERATIONS
+      A() : Integer
+;
+
+CLASS B
+ATTRIBUTES 
+      
+OPERATIONS
+      A() : Integer
+;
+
+CLASS C 
+ATTRIBUTES 
+      
+OPERATIONS
+      
+;
+
+CLASS D
+ATTRIBUTES 
+      
+OPERATIONS
+      
+;
+
+CLASS E
+ATTRIBUTES 
+      
+OPERATIONS
+      
+;
+
+GENERALIZATION B
+      SUBCLASSES D
+;
+
+GENERALIZATION C
+      SUBCLASSES D
+;
+
+GENERALIZATION E
+      SUBCLASSES C
+;
+
+GENERALIZATION A
+      SUBCLASSES B, E
+;
