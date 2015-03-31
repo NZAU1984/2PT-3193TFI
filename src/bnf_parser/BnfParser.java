@@ -341,7 +341,7 @@ public class BnfParser
 		/**
 		 * Sets the buffer position.
 		 *
-		 * @param	The position.
+		 * @param position	The position.
 		 */
 		protected void setBufferPosition(int position)
 		{
@@ -386,7 +386,7 @@ public class BnfParser
 		}
 
 		/**
-		 * Returns the total number of bytes in a {@link SubSequebce}. Many encodings such as UTF-8 sometimes use more
+		 * Returns the total number of bytes in a {@link SubSequence}. Many encodings such as UTF-8 sometimes use more
 		 * than one byte to create a character. This method is used to calculate offset in the file.
 		 *
 		 * @param sequence	The {@link CharSequence} from which return the length.

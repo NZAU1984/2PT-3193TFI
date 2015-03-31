@@ -164,6 +164,16 @@ class ClassContainer
 	// PACKAGE METHODS
 
 	/**
+	 * Returns the name of the class.
+	 *
+	 * @return	The name of the class.
+	 */
+	String getName()
+	{
+		return name;
+	}
+
+	/**
 	 * Adds a superclass to the list of superclasses.
 	 *
 	 * @param superClass	The instance of the superclass.
@@ -195,77 +205,6 @@ class ClassContainer
 		}
 
 		subclasses.add(subClass);
-	}
-
-	// PROTECTED METHODS
-
-	/**
-	 * Adds an attribute to the class.
-	 *
-	 * @param name	Name of the attribute.
-	 * @param type	Type of the attribute.
-	 *
-	 * @throws DuplicateException	Thrown if the attribute already exists.
-	 */
-	protected void addAttribute(String name, String type) throws DuplicateException
-	{
-		if(attributes.containsKey(name))
-		{
-			/* Duplicate. We don't care about the type since no two attributes can share the same name regardless of
-			 * their types. */
-
-			throw new DuplicateException();
-		}
-
-		attributes.put(name, type);
-	}
-
-	/**
-	 * Adds an operation to the class.
-	 *
-	 * @param operation	The {@link Operation} instance containing the information about the operation to be added.
-	 *
-	 * @throws DuplicateException	Thrown if the operation (name/signature) already exists.
-	 */
-	protected void addOperation(Operation operation) throws DuplicateException
-	{
-		ArrayList<OperationContainer> ocArrayList	= null;
-		OperationContainer operationContainer		= new OperationContainer(operation);
-		String name									= operation.getIdentifier();
-
-		if(operations.containsKey(name))
-		{
-			/* There already exists at least one operation with the same name. */
-
-			/* Let's fetch the row. */
-			ocArrayList	= operations.get(name);
-
-			for(OperationContainer otherOperation : ocArrayList)
-			{
-				/* Let's loop through all the operations with the same name and check their signature with the operation
-				 * to be added. */
-
-				if(otherOperation.isSignatureIdentical(operationContainer))
-				{
-					/* Duplicate name/signature found. We don't care about the return type since no two operations can
-					 * share the same name and signature regardless of their return types. */
-
-					throw new DuplicateException();
-				}
-			}
-		}
-		else
-		{
-			/* No other operation already exists with the name. We create a new row. */
-
-			ocArrayList	= new ArrayList<OperationContainer>();
-
-			/* Let's add the newly created row to the list of all operations. */
-			operations.put(name, ocArrayList);
-		}
-
-		/* No error so let's add the operation to its row. */
-		ocArrayList.add(operationContainer);
 	}
 
 	/**
@@ -306,63 +245,11 @@ class ClassContainer
 		aggregations.add(new InnerAggregationContainer(aggregation, isContainer, details));
 	}
 
-	// CREATORS/CHECKERS
-
-
-	protected void createAndCheckAttributes() throws ModelException
-	{
-		for(Dataitem attribute : classContent.getAttributes())
-		{
-			try
-			{
-				addAttribute(attribute.getIdentifier(), attribute.getType());
-			}
-			catch (DuplicateException e)
-			{
-				throw resetAndReturnException(ERRORS.DUPLICATE_ATTRIBUTE)
-					.set(ATTRIBUTES.ATTRIBUTE, attribute.getIdentifier())
-					.set(ATTRIBUTES.CLASS, getName());
-			}
-		}
-	}
-
-	protected void createAndCheckOperations() throws ModelException
-	{
-		for(Operation operation : classContent.getOperations())
-		{
-			try
-			{
-				//addOperation(operation.getIdentifier(), operation.getType(), signatureSb.toString());
-				addOperation(operation);
-			}
-			catch (DuplicateException e)
-			{
-				throw resetAndReturnException(ERRORS.DUPLICATE_OPERATION)
-					.set(ATTRIBUTES.OPERATION_NAME, operation.getIdentifier())
-					.set(ATTRIBUTES.OPERATION_TYPE, operation.getType())
-					.set(ATTRIBUTES.OPERATION_SIGNATURE, OperationContainer.formatSignature(operation))
-					.set(ATTRIBUTES.CLASS, getName());
-			}
-		}
-	}
-
-	// GETTERS
-
-	protected String getName()
-	{
-		return name;
-	}
-
-	protected Operation[] getOperations()
-	{
-		if(null == classContent)
-		{
-			return new Operation[0];
-		}
-
-		return classContent.getOperations();
-	}
-
+	/**
+	 * Returns the number of direct superclasses.
+	 *
+	 * @return	The number of direct superclasses.
+	 */
 	int getNumberOfSuperClasses()
 	{
 		if(null != superclassesCache)
@@ -378,6 +265,11 @@ class ClassContainer
 		return superclasses.size();
 	}
 
+	/**
+	 * Returns the {@link ClassContainer} instances of direct superclasses.
+	 *
+	 * @return The {@link ClassContainer} instances of direct superclasses.
+	 */
 	ClassContainer[] getSuperclasses()
 	{
 		if(null == superclasses)
@@ -388,6 +280,11 @@ class ClassContainer
 		return superclasses.toArray(new ClassContainer[superclasses.size()]);
 	}
 
+
+	/**
+	 * Returns the {@link ClassContainer} instances of direct/indirect superclasses.
+	 * @return	The {@link ClassContainer} instances of direct/indirect superclasses.
+	 */
 	ClassContainer[] getAllSuperclasses()
 	{
 		if(null != allSuperclassesCache)
@@ -426,6 +323,20 @@ class ClassContainer
 		return allSuperclassesCache;
 	}
 
+	/**
+	 * Returns the {@link ClassContainer} instances of direct subclasses.
+	 *
+	 * @return The {@link ClassContainer} instances of direct subclasses.
+	 */
+	ClassContainer[] getSubclasses()
+	{
+		return subclasses.toArray(new ClassContainer[subclasses.size()]);
+	}
+
+	/**
+	 * Returns the {@link ClassContainer} instances of direct/indirect subclasses.
+	 * @return	The {@link ClassContainer} instances of direct/indirect subclasses.
+	 */
 	ClassContainer[] getAllSubclasses()
 	{
 		if(null != allSubclassesCache)
@@ -464,11 +375,11 @@ class ClassContainer
 		return allSubclassesCache;
 	}
 
-	ClassContainer[] getSubclasses()
-	{
-		return subclasses.toArray(new ClassContainer[subclasses.size()]);
-	}
-
+	/**
+	 * Returns all the {@OperationContainer} instances of the operations.
+	 *
+	 * @return	All the {@OperationContainer} instances of the operations.
+	 */
 	OperationContainer[] getOperationContainers()
 	{
 		LinkedList<OperationContainer> cache	= new LinkedList<OperationContainer>();
@@ -492,48 +403,70 @@ class ClassContainer
 		return cache.toArray(new OperationContainer[n]);
 	}
 
+	/**
+	 * Returns the number of associations.
+	 *
+	 * @return	The numner of associations.
+	 */
 	int getNumberOfAssocitions()
 	{
 		return associations.size();
 	}
 
+	/**
+	 * Returns the number of aggregations.
+	 *
+	 * @return	The number of aggregations.
+	 */
 	int getNumberOfAggregations()
 	{
 		return aggregations.size();
 	}
 
 	/**
-	 * Returns the (calculated) metrics.
+	 * Sets the (calculated) metrics. This is called by the {@link Model}.
 	 *
-	 * @return	The instance of {@link Metrics}.
+	 * @param metrics	The calculated metrics. One metric per row. Frist inner index = metric name, second inner index
+	 * 					= value.
 	 */
-	String[][] getMetrics()
-	{
-		/*if(null == metrics)
-		{
-			/* If not already calculated, let's calculate metrics. *x/
-
-			calculateMetrics();
-		} */
-
-		return metrics;
-	}
-
 	void setMetrics(String[][] metrics)
 	{
 		this.metrics	= metrics;
 	}
 
-	// CONTAINS?
+	/**
+	 * Returns the (calculated) metrics.
+	 *
+	 * @return	The calculated metrics. One metric per row. Frist inner index = metric name, second inner index
+	 * 			= value.
+	 */
+	String[][] getMetrics()
+	{
+		return metrics;
+	}
 
+	/**
+	 * Checks if the class contains an attribute with the provided name.
+	 *
+	 * @param name	The name of the attribute.
+	 *
+	 * @return	{@code true} if an attribute of the specified name exists, {@code false} otherwise.
+	 */
 	boolean containsAttribute(String name)
 	{
 		return attributes.containsKey(name);
 	}
 
+	/**
+	 * Checks if the class contains an operation with the provided name/signature.
+	 *
+	 * @param name		The name of the operation.
+	 * @param signature	The signature of the operation.
+	 *
+	 * @return	{@code true} if an operation of the specified name/signature exists, {@code false} otherwise.
+	 */
 	boolean containsMethod(String name, String signature)
 	{
-		// HashMap<String, ArrayList<OperationContainer>> operations;
 		ArrayList<OperationContainer> methodSignatures	= operations.get(name);
 
 		if(null != methodSignatures)
@@ -550,17 +483,10 @@ class ClassContainer
 		return false;
 	}
 
-	boolean containsMethods(OperationContainer operationContainer)
-	{
-		//return operations1.contains(operationContainer);
-
-		//ListIterator<OperationContainer>
-
-		return false;
-	}
-
-	// ...
-
+	/**
+	 * When the {@link Model} has finished all the calculations of all the classes, it asks every class to build caches
+	 * to free memory and to minimize compuation.
+	 */
 	protected void buildCaches()
 	{
 		if((null == attributes) || (null == operations) || (null == subclasses) || (null == superclasses) || (null == metrics))
@@ -570,7 +496,6 @@ class ClassContainer
 
 		{
 			ArrayList<String> temp	= new ArrayList<String>();
-
 
 			Iterator<Entry<String, String>>	iterator = attributes.entrySet().iterator();
 
@@ -692,9 +617,152 @@ class ClassContainer
 			}
 		}
 
+		/* Hopefully this will free "lots" of memory... */
 		classContent	= null;
 	}
 
+	// PROTECTED METHODS
+
+	/**
+	 * Adds an attribute to the class.
+	 *
+	 * @param name	Name of the attribute.
+	 * @param type	Type of the attribute.
+	 *
+	 * @throws DuplicateException	Thrown if the attribute already exists.
+	 */
+	protected void addAttribute(String name, String type) throws DuplicateException
+	{
+		if(attributes.containsKey(name))
+		{
+			/* Duplicate. We don't care about the type since no two attributes can share the same name regardless of
+			 * their types. */
+
+			throw new DuplicateException();
+		}
+
+		attributes.put(name, type);
+	}
+
+	/**
+	 * Adds an operation to the class.
+	 *
+	 * @param operation	The {@link Operation} instance containing the information about the operation to be added.
+	 *
+	 * @throws DuplicateException	Thrown if the operation (name/signature) already exists.
+	 */
+	protected void addOperation(Operation operation) throws DuplicateException
+	{
+		ArrayList<OperationContainer> ocArrayList	= null;
+		OperationContainer operationContainer		= new OperationContainer(operation);
+		String name									= operation.getIdentifier();
+
+		if(operations.containsKey(name))
+		{
+			/* There already exists at least one operation with the same name. */
+
+			/* Let's fetch the row. */
+			ocArrayList	= operations.get(name);
+
+			for(OperationContainer otherOperation : ocArrayList)
+			{
+				/* Let's loop through all the operations with the same name and check their signature with the operation
+				 * to be added. */
+
+				if(otherOperation.isSignatureIdentical(operationContainer))
+				{
+					/* Duplicate name/signature found. We don't care about the return type since no two operations can
+					 * share the same name and signature regardless of their return types. */
+
+					throw new DuplicateException();
+				}
+			}
+		}
+		else
+		{
+			/* No other operation already exists with the name. We create a new row. */
+
+			ocArrayList	= new ArrayList<OperationContainer>();
+
+			/* Let's add the newly created row to the list of all operations. */
+			operations.put(name, ocArrayList);
+		}
+
+		/* No error so let's add the operation to its row. */
+		ocArrayList.add(operationContainer);
+	}
+
+	/**
+	 * Creates, and checks, attributes. This is called directly by the constructor.
+	 *
+	 * @throws ModelException	Thrown if a duplicate error occurs.
+	 */
+	protected void createAndCheckAttributes() throws ModelException
+	{
+		for(Dataitem attribute : classContent.getAttributes())
+		{
+			try
+			{
+				addAttribute(attribute.getIdentifier(), attribute.getType());
+			}
+			catch (DuplicateException e)
+			{
+				/* Duplicate attribute. */
+
+				throw createException(ERRORS.DUPLICATE_ATTRIBUTE)
+					.set(ATTRIBUTES.ATTRIBUTE, attribute.getIdentifier())
+					.set(ATTRIBUTES.CLASS, getName());
+			}
+		}
+	}
+
+	/**
+	 * Created, and checks, operations. This is called directly by the constructor.
+	 *
+	 * @throws ModelException	Thrown if a duplicate error occurs.
+	 */
+	protected void createAndCheckOperations() throws ModelException
+	{
+		for(Operation operation : classContent.getOperations())
+		{
+			try
+			{
+				addOperation(operation);
+			}
+			catch (DuplicateException e)
+			{
+				/* Duplicate operation. */
+
+				throw createException(ERRORS.DUPLICATE_OPERATION)
+					.set(ATTRIBUTES.OPERATION_NAME, operation.getIdentifier())
+					.set(ATTRIBUTES.OPERATION_TYPE, operation.getType())
+					.set(ATTRIBUTES.OPERATION_SIGNATURE, OperationContainer.formatSignature(operation))
+					.set(ATTRIBUTES.CLASS, getName());
+			}
+		}
+	}
+
+
+	/**
+	 * Returns all the {@link Operation} instances of the operations.
+	 *
+	 * @return All the {@link Operation} instances of the operations.
+	 */
+	protected Operation[] getOperations()
+	{
+		if(null == classContent)
+		{
+			return new Operation[0];
+		}
+
+		return classContent.getOperations();
+	}
+
+	/**
+	 * Returns all the names of the attributes.
+	 *
+	 * @return	All the names of the attributes.
+	 */
 	public String[] getAttributeNames()
 	{
 		if(null != attributeNamesCache)
@@ -713,30 +781,32 @@ class ClassContainer
 			Entry<String, String> val	= iterator.next();
 
 			attributeNamesCache[pos++]	= val.getKey();
-			//temp.add(val.getValue() + " " + val.getKey());
 		}
 
 		return attributeNamesCache;
 	}
 
-	public String[] getAttributes()
+	/**
+	 * Creates a new {@link ModelException}. It could be used to free some memory but since an exception thrown here
+	 * will be caught by the {@link Model}, all references to 'this' will be lost since the {@link Model} resets itself
+	 * whenever an exception occurs.
+	 *
+	 * @param error	The type of the error.
+	 *
+	 * @return	The new exception.
+	 */
+	protected ModelException createException(ModelException.ERRORS error)
 	{
-		if(null == attributesCache)
-		{
-			buildCaches();
-		}
-
-		return attributesCache;
-	}
-
-	ModelException resetAndReturnException(ModelException.ERRORS error) throws ModelException
-	{
-		//resetModel();
-
 		return new ModelException(error);
 	}
 }
 
+/**
+ * Simple container class for associations.
+ *
+ * @author Hubert Lemelin
+ *
+ */
 class InnerAssociationContainer
 {
 	protected final Association association;
@@ -753,6 +823,9 @@ class InnerAssociationContainer
 	}
 }
 
+/*8
+ * Simple container class for aggregations.
+ */
 class InnerAggregationContainer
 {
 	protected final Aggregation	aggregation;
