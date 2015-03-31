@@ -28,6 +28,9 @@ public class OperationCollector extends Collector implements Operation
 	 */
 	protected DataitemListCollector dataitemListCollector;
 
+	/**
+	 * Constructor.
+	 */
 	public OperationCollector()
 	{
 		super();

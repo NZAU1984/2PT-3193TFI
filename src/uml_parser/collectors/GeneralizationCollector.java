@@ -13,12 +13,18 @@ import bnf_parser.collectors.StringCollector;
 public class GeneralizationCollector extends Collector implements Generalization
 {
 	/**
-	 * The identifier (name) of the generalization.
+	 * The identifier (name) of the superclass of the generalization.
 	 */
 	protected String identifier;
 
+	/**
+	 * The list of the subclasses of the generalization.
+	 */
 	protected IdentifierListCollector identifierListCollector;
 
+	/**
+	 * Constructor.
+	 */
 	public GeneralizationCollector()
 	{
 		super();

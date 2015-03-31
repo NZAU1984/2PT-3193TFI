@@ -18,6 +18,11 @@ public interface Generalization
 	 */
 	public String getSuperclassName();
 
+	/**
+	 * Returns the names of subclasses.
+	 *
+	 * @return	An array containing all the names of the subclasses.
+	 */
 	public String[] getSubclassNames();
 
 	/**

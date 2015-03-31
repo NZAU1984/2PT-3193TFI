@@ -53,20 +53,6 @@ public class Rule
 	 */
 	protected boolean mustMatchEndOfFile	= false;
 
-	// TODO remove
-	// temp
-	protected String name="";
-	public Rule setName(String name)
-	{
-		this.name=name;
-		return this;
-	}
-	public String getName()
-	{
-		return name;
-	}
-	//temp
-
 	// PACKAGE CONSTRUCTOR
 
 	/**

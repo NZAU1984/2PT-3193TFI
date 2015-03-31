@@ -2,6 +2,7 @@ package bnf_parser;
 
 /**
  * Defines an exception thrown when properties of a subrule are set when there are no subrules defined yet.
+ *
  * @author Hubert Lemelin
  *
  */

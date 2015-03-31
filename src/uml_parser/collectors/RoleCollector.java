@@ -21,6 +21,9 @@ public class RoleCollector extends Collector implements Role
 	 */
 	protected String multiplicity;
 
+	/**
+	 * Constructor.
+	 */
 	public RoleCollector()
 	{
 		super();

@@ -20,6 +20,9 @@ public class DataitemListCollector extends Collector implements DataitemList
 	 */
 	protected ArrayList<DataitemCollector>	dataitemCollectors;
 
+	/**
+	 * Constructor.
+	 */
 	public DataitemListCollector()
 	{
 		super();

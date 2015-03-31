@@ -20,6 +20,9 @@ public class RoleListCollector extends Collector implements RoleList
 	 */
 	protected ArrayList<Role>	roleCollectors;
 
+	/**
+	 * Constructor.
+	 */
 	public RoleListCollector()
 	{
 		super();

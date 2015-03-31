@@ -16,8 +16,14 @@ public class OperationListCollector extends Collector implements OperationList
 {
 	// PROTECTED PROPERTIES
 
+	/**
+	 * A list of {@link OperationCollector}'s.
+	 */
 	protected ArrayList<OperationCollector>	operationCollectors;
 
+	/**
+	 * Constructor.
+	 */
 	public OperationListCollector()
 	{
 		super();

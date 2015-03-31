@@ -2,31 +2,22 @@ package mvc.models;
 
 import java.util.HashMap;
 
-/*
- * Section:
- * 	- Class
- *  - Attribute
- *  - Method
- *  - Parent class
- *  - Child class
- *  - Inheritance
- *  - Association
- *  - Aggregation
+/**
+ * Exception class used when a specific error occurs in the model. It uses an ENUM to define many types of errors which
+ * allows to use one class instead of many individual exception classes. It also allows to set/get specific
+ * attributes.
  *
- * Type:
- *	- DUPLICATE
- *  - UNKNOWN (class)
- *  - CYCLE
- *  - (UNKNOWN_AGGREGATION_CONTAINER_CLASS)
- *  - (UNKNOWN_AGGREGATION_PART_CLASS)
+ * @author Hubert Lemelin
  *
- * Details:
- * 	- Class name
- *  - Attribute name
- *  - Method name/return type/signature
  */
 public class ModelException extends Exception
 {
+	/**
+	 * The error types.
+	 *
+	 * @author Hubert Lemelin
+	 *
+	 */
 	public static enum ERRORS
 	{
 		DUPLICATE_ASSOCIATION,
@@ -35,6 +26,7 @@ public class ModelException extends Exception
 		DUPLICATE_OPERATION,
 		INHERITANCE_CYCLE,
 		INVALID_FILE,
+		MULTIPLE_INHERITANCE_NOT_ALLOWED,
 		PARSING_FAILED,
 		UNKNOWN_AGGREGATION_CONTAINER_CLASS,
 		UNKNOWN_AGGREGATION_PART_CLASS,
@@ -44,6 +36,12 @@ public class ModelException extends Exception
 		;
 	}
 
+	/**
+	 * The attributes.
+	 *
+	 * @author Hubert Lemelin
+	 *
+	 */
 	public static enum ATTRIBUTES
 	{
 		ASSOCIATION,
@@ -61,15 +59,32 @@ public class ModelException extends Exception
 		;
 	}
 
+	/**
+	 * Current error type.
+	 */
 	protected final ERRORS error;
 
+	/**
+	 * List of attributes/values.
+	 */
 	protected HashMap<ATTRIBUTES, String> attributeMap;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param error	The type of the new exception.
+	 */
 	public ModelException(ERRORS error)
 	{
 		this(error, null);
 	}
 
+	/**
+	 * Constructor with message.
+	 *
+	 * @param error		The type of the new exception.
+	 * @param message	The message.
+	 */
 	public ModelException(ERRORS error, String message)
 	{
 		super(message);
@@ -77,6 +92,14 @@ public class ModelException extends Exception
 		this.error	= error;
 	}
 
+	/**
+	 * Defines an attribute with a value.
+	 *
+	 * @param attribute	The attribute.
+	 * @param value		The value.
+	 *
+	 * @return	Returns 'this' to allow chaining.
+	 */
 	public ModelException set(ATTRIBUTES attribute, String value)
 	{
 		createMap();
@@ -86,11 +109,23 @@ public class ModelException extends Exception
 		return this;
 	}
 
+	/**
+	 * Returns the type of the error.
+	 *
+	 * @return	The type of the erorr.
+	 */
 	public ERRORS getError()
 	{
 		return error;
 	}
 
+	/**
+	 * Returns the value of specified attribute.
+	 *
+	 * @param attribute	The attribute.
+	 *
+	 * @return	The value if attribut is found, {@code null} otherwise.
+	 */
 	public String get(ATTRIBUTES attribute)
 	{
 		if(null == attributeMap)
@@ -101,6 +136,9 @@ public class ModelException extends Exception
 		return attributeMap.get(attribute);
 	}
 
+	/**
+	 * Creates the map if not already created.
+	 */
 	protected void createMap()
 	{
 		if(null == attributeMap)

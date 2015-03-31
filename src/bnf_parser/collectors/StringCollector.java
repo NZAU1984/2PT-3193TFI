@@ -25,11 +25,7 @@ public class StringCollector extends Collector
 	 */
 	public StringCollector()
 	{
-// TODO remove
-//System.out.println("** StringCollector :: constructor");
-
 		sb				= new StringBuilder();
-		collectorName	= "StringCollector";
 	}
 
 	// PUBLIC METHODS

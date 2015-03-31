@@ -1,39 +1,115 @@
 package mvc.models;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import uml_parser.Dataitem;
 import uml_parser.Operation;
 
+/**
+ * This class is used to calculate metrics for a specific file (a specific model). One instance is created per file
+ * (per model). Metrics for a specific class of the model are returned via a method call on that unique instance.
+ *
+ * @author Hubert Lemelin
+ *
+ */
 public class Metrics
 {
-	protected static HashMap<String, Integer> ITC;
+	/**
+	 * All types of metrics.
+	 *
+	 * @author Hubert Lemelin
+	 *
+	 */
+	public enum METRICS
+	{
+		ANA,
+		NOM,
+		NOA,
+		ITC,
+		ETC,
+		CAC,
+		DIT,
+		CLD,
+		NOC,
+		NOD
+		;
 
-	protected static HashMap<String, AtomicInteger> ETC;
+		/**
+		 * Stored the metrics in an array so we can return one metric with a specific index.
+		 */
+		protected static final METRICS[] values	= values();
 
-	protected static HashMap<String, Integer> DIT;
+		/**
+		 * Returns the metric associated with the index.
+		 * @param index
+		 * @return
+		 */
+		public static METRICS getMetricFromIndex(int index)
+		{
+			if((0 > index) || (index >= values.length))
+			{
+				return null;
+			}
 
-	protected static HashMap<String, Integer> CLD;
+			return values[index];
+		}
+
+		/**
+		 * Returns the number of metrics.
+		 *
+		 * @return	The number of metrics.
+		 */
+		public static int getNumberOfMetrics()
+		{
+			return values.length;
+		}
+	}
 
 	/**
-	 * The reference to the {@link ClassContainer} for which metrics must be calculated.
+	 * HashMap containing the number of times other classes appear as the type of the attributes of the methods of the
+	 * current class being analyzed. The key is the name of the class.
 	 */
-	ClassContainer classContainer;
+	protected HashMap<String, Integer> ITC;
 
-	float averageNumberOfArguments	= 0;
+	/**
+	 * HashMap containing the number of times the current class being analyzed apears as the type of the attributes
+	 * of the methods of other classes. The key is the name of the class. We use {@link AtomicInteger} to directly
+	 * increment the value so we don't have to extract the value from the HashMap, increment it, and store it back.
+	 */
+	protected HashMap<String, AtomicInteger> ETC;
 
-	int numberOfLocalAndInheritedMethods	= 0;
+	/**
+	 * HashMap containing the length of the longest path from the current class being analyzed to a superclass (the root
+	 * of the inheritance tree). The key is the name of the class.
+	 */
+	protected HashMap<String, Integer> DIT;
 
-	int numberOfLocalAndInheritedAttributes	= 0;
+	/**
+	 * HashMap containing the length of the longest path from the current class being analyzed to a subclass (the leaf
+	 * of the inheritane tree). The key is the name of the class.
+	 */
+	protected HashMap<String, Integer> CLD;
 
-	int numberOfDirectSubclasses	= 0;
+	/**
+	 * HashMap containing the number of local/inherited associations/aggregations of the current class being analyzed.
+	 * The key is the name of the class.
+	 */
+	protected HashMap<String, Integer> CAC;
 
-	int numberOfDirectAndIndirectSubclasses	= 0;
+	// PACKAGE CONSTRUCTOR
 
-	// STATIC
-	public static void resetAndPrecalculate(ClassContainer[] allClasses)
+	/**
+	 * Constructor.
+	 *
+	 * @param classContainer	The {@link ClassContainer} for which metrics must be calculated.
+	 */
+	Metrics(ClassContainer[] allClasses)
 	{
+		/* We store the name of the classes to distinguish between primitive type (ex. Integer) and types that refer to
+		 * classes in the model. Notice that we don't check the validity of the types if it is not a class and if it
+		 * not a "valid" primitive. */
 		HashMap<String, ClassContainer> classNames	= new HashMap<String, ClassContainer>();
 
 		ITC	= new HashMap<String, Integer>();
@@ -44,25 +120,32 @@ public class Metrics
 
 		CLD	= new HashMap<String, Integer>();
 
+		CAC	= new HashMap<String, Integer>();
+
 		for(ClassContainer currentClass : allClasses)
 		{
 			String className	= currentClass.getName();
 
 			classNames.put(className, currentClass);
-			ITC.put(className, 0);
+
 			ETC.put(className, new AtomicInteger());
 
+			/* Let's calculate the longest path in the inheritance tree towards the root. */
 			calculateLongestSuperclassPath(currentClass);
 
+			/* Let's calculate the longest path in the inheritance tree towards the leaves. */
 			calculateLongestSubclassPath(currentClass);
+
+			/* Let's calculate the number of associations/aggregations of current class. */
+			calculateNumberOfAssociationsAndAggregations(currentClass);
 		}
 
 		for(ClassContainer currentClass : allClasses)
 		{
-			String currentClassName	= currentClass.getName();
-			int currentClassITC			= 0;
+			/* Here we'll loop through all the methods of the model to defined ITC and ETC. */
 
-			System.out.println("Analyzing argument of class " + currentClassName);
+			String currentClassName	= currentClass.getName();
+			int currentClassITC		= 0;
 
 			OperationContainer[] operations	= currentClass.getOperationContainers();
 
@@ -76,31 +159,90 @@ public class Metrics
 
 					if(!type.equals(currentClassName) && classNames.containsKey(type))
 					{
-						System.out.println(".. type " + type + " is not current class and is another class");
+						/* Current type is a class of the model. We can update ITC and ETC. */
 
 						++currentClassITC;
 
+						/* ETC refers to other classes. We use an AtomicInteger to simplify to increment process. */
 						ETC.get(type).incrementAndGet();
 					}
 				}
 			}
 
+			/* ITC refers only to current class, so let's finally store it. */
 			ITC.put(currentClassName, currentClassITC);
-		}
-
-		for(ClassContainer currentClass : allClasses)
-		{
-			String name=currentClass.getName();
-			System.out.println("Class " + name + " : ITC=" + ITC.get(name) + ", ETC=" + ETC.get(name).intValue() + ", DIT=" + DIT.get(name) + ", CLD=" + CLD.get(name));
 		}
 	}
 
-	protected static int calculateLongestSuperclassPath(ClassContainer startingClass)
+	// PACKAGE METHODS
+
+	/**
+	 * Calculates all metrics and build caches.
+	 */
+	String[][] getMetrics(ClassContainer classContainer)
 	{
-		String className	= startingClass.getName();
+		if(null == classContainer)
+		{
+			return null;
+		}
+
+		ArrayList<String[]> metrics	= new ArrayList<String[]>();
+
+		String className	= classContainer.getName();
+
+		OperationAttributeNumberContainer NOMandNOA = calculateNOMandNOA(classContainer);
+
+		/* Average number of arguments of local methods. */
+		metrics.add(new String[] {"ANA", String.valueOf(calculateANA(classContainer))});
+
+		/* Number of local/inherited methods. */
+		metrics.add(new String[] {"NOM", String.valueOf(NOMandNOA.numberOfLocalAndInheritedMethods)});
+
+		/* Number of local/inherited attributes. */
+		metrics.add(new String[] {"NOA", String.valueOf(NOMandNOA.numberOfLocalAndInheritedAttributes)});
+
+		/* Number of times other classes appear as type of arguments of current class's methods. */
+		metrics.add(new String[] {"ITC", String.valueOf(ITC.get(className))});
+
+		/* Number of times current class appears as type of other classes' attributes. */
+		metrics.add(new String[] {"ETC", String.valueOf(ETC.get(className))});
+
+		/* Number of local/inherited associations/aggregations. */
+		metrics.add(new String[] {"CAC", String.valueOf(CAC.get(className))});
+
+		/* Longest path length to superclasses. */
+		metrics.add(new String[] {"DIT", String.valueOf(DIT.get(className))});
+
+		/* Longest path length to subclases. */
+		metrics.add(new String[] {"CLD", String.valueOf(CLD.get(className))});
+
+		/* Number of direct subclasses. */
+		metrics.add(new String[] {"NOC", String.valueOf(calculateNOC(classContainer))});
+
+		/* Number of direct/indirect subclasses. */
+		metrics.add(new String[] {"NOD", String.valueOf(calculateNOD(classContainer))});
+
+		return metrics.toArray(new String[metrics.size()][2]);
+	}
+
+	// PROTECTED METHODS
+
+	/**
+	 * Calculates the length of the longest path from the current class to the root in the inheritance tree. It is a
+	 * recursive process which uses caches to speed things up.
+	 *
+	 * @param startingClass	The class from which we start.
+	 *
+	 * @return	The length of the longest path.
+	 */
+	protected int calculateLongestSuperclassPath(ClassContainer startingClass)
+	{
+		String className			= startingClass.getName();
 
 		if(DIT.containsKey(className))
 		{
+			/* If already calculated, let's simply return it. */
+
 			return DIT.get(className);
 		}
 
@@ -108,33 +250,48 @@ public class Metrics
 
 		if((null == superclasses) || (0 == superclasses.length))
 		{
+			/* No superclases = length of 0. */
+
 			DIT.put(className, 0);
 
 			return 0;
 		}
 
-		int longestLength	= 0;
+		int longestSuperclassPath	= 0;
 
 		for(ClassContainer superclass : superclasses)
 		{
+			/* Selects the longest path from direct superclasses. Recursion occurs here. */
+
 			int currentLength	= calculateLongestSuperclassPath(superclass);
 
-			longestLength	= Math.max(currentLength, longestLength);
+			longestSuperclassPath	= Math.max(currentLength, longestSuperclassPath);
 		}
 
-		++longestLength;
+		/* +1 because the current class is one level below its superclasses. */
+		++longestSuperclassPath;
 
-		DIT.put(className, longestLength);
+		DIT.put(className, longestSuperclassPath);
 
-		return longestLength;
+		return longestSuperclassPath;
 	}
 
-	protected static int calculateLongestSubclassPath(ClassContainer startingClass)
+	/**
+	 * Calculates the length of the longest path from the current class to the leaves in the inheritance tree. It is a
+	 * recursive process which uses caches to speed things up.
+	 *
+	 * @param startingClass	The class from which we start.
+	 *
+	 * @return	The length of the longest path.
+	 */
+	protected int calculateLongestSubclassPath(ClassContainer startingClass)
 	{
 		String className	= startingClass.getName();
 
 		if(CLD.containsKey(className))
 		{
+			/* If already calculated, let's simply return it. */
+
 			return CLD.get(className);
 		}
 
@@ -142,6 +299,8 @@ public class Metrics
 
 		if((null == subclasses) || (0 == subclasses.length))
 		{
+			/* No subclasses = length of 0. */
+
 			CLD.put(className, 0);
 
 			return 0;
@@ -151,11 +310,14 @@ public class Metrics
 
 		for(ClassContainer subclass : subclasses)
 		{
+			/* Selects the longest path from direct subclasses. Recursion occurs here. */
+
 			int currentLength	= calculateLongestSubclassPath(subclass);
 
 			longestLength	= Math.max(currentLength, longestLength);
 		}
 
+		/* +1 because the current class is one level above its subclasses. */
 		++longestLength;
 
 		CLD.put(className, longestLength);
@@ -163,50 +325,61 @@ public class Metrics
 		return longestLength;
 	}
 
-	// CONSTRUCTOR
-
 	/**
-	 * Constructor.
+	 * Calculates the nuber of local/inherited associations and aggregations. Simply adds things up.
 	 *
-	 * @param classContainer	The {@link ClassContainer} for which metrics must be calculated.
+	 * @param startingClass	The class from which we start.
+	 *
+	 * @return	The number of local/inherited associations and aggregations.
 	 */
-	public Metrics(ClassContainer classContainer)
+	protected int calculateNumberOfAssociationsAndAggregations(ClassContainer startingClass)
 	{
-		this.classContainer	= classContainer;
-	}
+		String className			= startingClass.getName();
 
-	/**
-	 * Calculates all metrics and build caches.
-	 */
-	public void calculate()
-	{
-		if(null == classContainer)
+		if(CAC.containsKey(className))
 		{
-			return;
+			/* If already calculated, let's simply return it. */
+
+			return CAC.get(className);
 		}
 
-		System.out.println("Calculating metrics for class " + classContainer.getName());
+		/* First we use the number of associations and aggregations of the current class. */
+		int numberOfAssociationsAndAggregations= startingClass.getNumberOfAggregations() + startingClass.getNumberOfAssocitions();
 
-		/* Average number of arguments of local methods. */
-		calculateANA();
+		ClassContainer[] superclasses	= startingClass.getSuperclasses();
 
-		calculateNOMandNOA();
+		if((null == superclasses) || (0 == superclasses.length))
+		{
+			/* No superclasses = no recursion needed. */
 
-		calculateNOC();
+			CAC.put(className, numberOfAssociationsAndAggregations);
 
-		calculateNOD();
+			return numberOfAssociationsAndAggregations;
+		}
 
+		for(ClassContainer superclass : superclasses)
+		{
+			/* Let's simply increment the value with the value of each superclass. Recursion occurs here.*/
 
+			numberOfAssociationsAndAggregations	+= calculateNumberOfAssociationsAndAggregations(superclass);
+		}
 
-		/* Unlinking classContainer so memory might be freed if no more references point to it. */
-		classContainer	= null;
+		CAC.put(className, numberOfAssociationsAndAggregations);
+
+		return numberOfAssociationsAndAggregations;
 	}
 
 	/**
 	 * Calculates the average number of arguments of local methods.
+	 *
+	 * @param classContainer	The class in which the calculation has to be made.
+	 *
+	 * @return	The average number of attributes of the methods.
 	 */
-	protected void calculateANA()
+	protected float calculateANA(ClassContainer classContainer)
 	{
+		float averageNumberOfArguments	= 0;
+
 		Operation[] operations	= classContainer.getOperations();
 
 		/* Total number of operations. */
@@ -224,14 +397,22 @@ public class Metrics
 
 		if(0 != nOperations)
 		{
+			/* To avoid division by zero. */
+
 			averageNumberOfArguments	= (nArguments + 0.0f) / nOperations;
 		}
+
+		return averageNumberOfArguments;
 	}
 
 	/**
 	 * Calculates the number of local and inherited methods.
+	 *
+	 * @param classContainer	The class in which calculation has to be made.
+	 *
+	 * @return	And instance of {@link OperationAttributeNumberContainer} which is a simple container.
 	 */
-	protected void calculateNOMandNOA()
+	protected OperationAttributeNumberContainer calculateNOMandNOA(ClassContainer classContainer)
 	{
 		/* This code allows multiple inheritance, meaning that a class can extends two or more classes. This exists
 		 * in some languages like C++. One question arises: what happens if a method exists in two or more superclasses?
@@ -240,19 +421,19 @@ public class Metrics
 		 * method is defined in more than one superclass. For simplicity, if two superclasses define the same method,
 		 * we'll only count it once. */
 
+		OperationAttributeNumberContainer container	= new OperationAttributeNumberContainer();
+
 		ClassContainer[] superclasses	= classContainer.getAllSuperclasses();
 
 		String[] myAttributes	= classContainer.getAttributeNames();
 
-		numberOfLocalAndInheritedAttributes	= myAttributes.length;
+		int numberOfLocalAndInheritedAttributes	= myAttributes.length;
 
 		/* Let's get the methods from the class. */
 		OperationContainer[] myOperations	= classContainer.getOperationContainers();
 
 		/* At first, the number of methods is equal to the number of methods of the class. */
-		numberOfLocalAndInheritedMethods	= myOperations.length;
-
-		//System.out.println("Class " + classContainer.getName() + " contains " +  numberOfLocalAndInheritedMethods + " local methods");
+		int numberOfLocalAndInheritedMethods	= myOperations.length;
 
 		/* Let's get the superclasses of the class. Since we allow multiple inheritance, there might be more than one
 		 * immediate superclass. */
@@ -279,23 +460,14 @@ public class Metrics
 
 			HashMap<String, Boolean> inheritedAttributes	= new HashMap<String, Boolean>();
 
-			//while(0 != superClasses.size())
 			for(ClassContainer currentClass : superclasses)
 			{
-				//ClassContainer currentClass	= superClasses.removeFirst();
-
-				//System.out.println("==== Comparing with superclass " + currentClass.getName());
-
 				String[] yourAttributes	= currentClass.getAttributeNames();
 
 				for(String yourAttribute : yourAttributes)
 				{
-					//System.out.println("xxx " + yourAttribute);
-
 					if(!classContainer.containsAttribute(yourAttribute) && !inheritedAttributes.containsKey(yourAttribute))
 					{
-						//System.out.println("### attrib " + yourAttribute + " added to inherited..");
-
 						++numberOfLocalAndInheritedAttributes;
 
 						inheritedAttributes.put(yourAttribute, true);
@@ -316,8 +488,6 @@ public class Metrics
 					{
 						/* Method exists in superclass but not in the (sub) class and was not already inherited. Let's
 						 * count it. */
-						//System.out.println("### method " + yourOperation.getName() + " (" + yourOperation.getType() + ") added to inherited..");
-
 						++numberOfLocalAndInheritedMethods;
 
 						/* Addind to the HashMap to avoid counting twice. */
@@ -327,15 +497,46 @@ public class Metrics
 
 			}
 		}
+
+		container.numberOfLocalAndInheritedAttributes	= numberOfLocalAndInheritedAttributes;
+		container.numberOfLocalAndInheritedMethods		= numberOfLocalAndInheritedMethods;
+
+		return container;
 	}
 
-	protected void calculateNOC()
+	/**
+	 * Returns the number of direct subclasses.
+	 *
+	 * @param classContainer	The current class.
+	 *
+	 * @return	The number of direct subclasses.
+	 */
+	protected int calculateNOC(ClassContainer classContainer)
 	{
-		numberOfDirectSubclasses	= classContainer.getSuperclasses().length;
+		return classContainer.getSubclasses().length;
 	}
 
-	protected void calculateNOD()
+	/**
+	 * Returns the number of direct/indirect subclasss.
+	 *
+	 * @param classContainer	The current class.
+	 *
+	 * @return	The number of direct/indirect classes.
+	 */
+	protected int calculateNOD(ClassContainer classContainer)
 	{
-		numberOfDirectAndIndirectSubclasses	= classContainer.getAllSuperclasses().length;
+		return classContainer.getAllSubclasses().length;
+	}
+
+	/**
+	 * A simple container for 2 integers returned by one method.
+	 *
+	 * @author Hubert Lemelin
+	 *
+	 */
+	protected class OperationAttributeNumberContainer
+	{
+		int numberOfLocalAndInheritedMethods;
+		int numberOfLocalAndInheritedAttributes;
 	}
 }

@@ -24,6 +24,9 @@ public class AggregationCollector extends Collector implements Aggregation
 
 	//protected RoleListC
 
+	/*
+	 * Constructor.
+	 */
 	public AggregationCollector()
 	{
 		super();

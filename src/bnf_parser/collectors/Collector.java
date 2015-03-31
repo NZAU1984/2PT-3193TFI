@@ -11,14 +11,6 @@ package bnf_parser.collectors;
  */
 public abstract class Collector
 {
-	// PROTECTED PROPERTIES
-
-	/**
-	 * Contains the name of the current subclass of Collector, used to identify different collectors more easily.
-	 */
-	protected String collectorName	= "";
-
-
 	// PRIVATE PROPERTIES
 
 	/**
@@ -65,9 +57,6 @@ public abstract class Collector
 	public void setEndOffset(int endOffset)
 	{
 		this.endOffset	= endOffset;
-
-//TODO remove
-//System.out.println("[" + startOffset + " -> " + endOffset + "]");
 	}
 
 	/**
@@ -97,14 +86,5 @@ public abstract class Collector
 	public int getEndOffset()
 	{
 		return endOffset;
-	}
-
-	/**
-	 * Used to easily identify the current subclass of Collector.
-	 * @return	The name of current subclass of Collector.
-	 */
-	public String identify()
-	{
-		return collectorName;
 	}
 }

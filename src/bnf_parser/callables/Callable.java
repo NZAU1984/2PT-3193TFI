@@ -12,6 +12,7 @@ import bnf_parser.collectors.Collector;
  * every {@code Callable}. If all calls return true, then the rule matched successfully. Otherwise, if any call returns
  * false, then the parsing failed (the rule did not match). Every callable has a minimum number of occurences (can be
  * 0) and a maximum number of occurences (can be up to {@code Integer.MAX_VALUE} which is considered 'infinity').
+ *
  * @author Hubert Lemelin
  *
  */

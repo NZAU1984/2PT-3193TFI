@@ -33,6 +33,9 @@ public class AssociationCollector extends Collector implements Association
 	 * The second role.
 	 */
 
+	/**
+	 * Constructor.
+	 */
 	public AssociationCollector()
 	{
 		super();

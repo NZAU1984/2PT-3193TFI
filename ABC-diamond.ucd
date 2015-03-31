@@ -31,7 +31,7 @@ CLASS E
 ATTRIBUTES 
       
 OPERATIONS
-      
+      X(x : X, y : Y, z : Z) : Integer
 ;
 
 GENERALIZATION B

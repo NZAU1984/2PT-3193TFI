@@ -8,8 +8,11 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Observable;
 
+import mvc.Controller;
+import mvc.models.Metrics.METRICS;
 import mvc.models.ModelException.ATTRIBUTES;
 import mvc.models.ModelException.ERRORS;
+import mvc.views.MainWindow;
 import uml_parser.Aggregation;
 import uml_parser.Association;
 import uml_parser.ClassContent;
@@ -19,6 +22,17 @@ import uml_parser.Role;
 import uml_parser.UmlParser;
 
 
+/**
+ * This class is the link between the program visible to the user ({@link MainWindow} / {@link Controller}) and
+ * {@link UmlParser} (which should be viewed as a library). In the MVC design pattern, it is the model which is
+ * responsible to get and manipulate data and send the to the view. The model communicates with the view by using
+ * the observer design pattern. So there could be more than one view at the time and each could react differently to
+ * messages sent. The view sends events to the controller which decides what to do (update the view or ask a bunch of
+ * stuff to the model).
+ *
+ * @author Hubert Lemelin
+ *
+ */
 public class Model extends Observable
 {
 	// PROTECTED PROPERTIES
@@ -38,6 +52,9 @@ public class Model extends Observable
 	 */
 	protected HashMap<String, ClassContainer> classes;
 
+	/* Sorted class names. Used when generating the metrics file. */
+	protected ArrayList<String> sortedClassNames;
+
 	/**
 	 * The filename of the current model's definition file.
 	 */
@@ -48,8 +65,16 @@ public class Model extends Observable
 	 */
 	protected String charset;
 
+	/**
+	 * Determines wether or not multiple inheritance is allowed.
+	 */
+	protected Boolean allowMultipleInheritance	= true;
+
 	// PUBLIC CONSTRUCTOR
 
+	/**
+	 * Constructor.
+	 */
 	public Model()
 	{
 		umlParser	= UmlParser.getInstance();
@@ -88,6 +113,16 @@ public class Model extends Observable
 	}
 
 	/**
+	 * Sets whether or not multiple inheritance is allowed.
+	 *
+	 * @param val	{@code true} if multiple inheritance is enabled, {@code false} if not.
+	 */
+	public void setMultipleInheritance(Boolean val)
+	{
+		allowMultipleInheritance	= val;
+	}
+
+	/**
 	 * Sends the main details of a class to observers (in this project, the view). Details include attributes, methods
 	 * (operations), subclasses, superclasses, associations and aggregations.
 	 *
@@ -116,6 +151,8 @@ public class Model extends Observable
 		sendList(ListContainer.ASSOCIATION_LIST, currentClass.associationsCache);
 
 		sendList(ListContainer.AGGREGATION_LIST, currentClass.aggregationsCache);
+
+		sendList(ListContainer.METRIC_LIST, currentClass.metricsCache);
 	}
 
 	/**
@@ -168,6 +205,57 @@ public class Model extends Observable
 		 * UmlParser.getSubstringFromFile() for details. */
 		sendString(umlParser.getSubstringFromFile(filename, charset,
 				currentClass.associationsCache[index].association));
+	}
+
+	/**
+	 * Returns all the metrics of the classes contained in the currently parsed file.
+	 *
+	 * @return	An array of array of strings. Each outer array element (a "line") is for a class and an inner array is
+	 *     for the name of the class followed by the values of the metrics.
+	 */
+	public String[][] getMetrics()
+	{
+		if((null == classes) || (null == sortedClassNames))
+		{
+			return null;
+		}
+
+		int nMetrics		= METRICS.getNumberOfMetrics();
+
+		/* +1 because the first cell is the name of the class. */
+		int innerSize		= 1 + nMetrics;
+
+		String[][] metrics	= new String[classes.size()][innerSize];
+
+		int n = 0;
+
+		for(String className : sortedClassNames)
+		{
+			ClassContainer currentClass	= getClass(className);
+
+			if(null == currentClass)
+			{
+				continue;
+			}
+
+			String[] currentLine	= new String[innerSize];
+
+			/* First cell in current line = name of class. */
+			currentLine[0]	= className;
+
+			String[][]	classMetrics	= currentClass.metrics;
+
+			for(int i = 0; i < nMetrics; ++i)
+			{
+				/* All other cells in current line = one specific metric value. */
+
+				currentLine[i + 1]	= classMetrics[i][1];
+			}
+
+			metrics[n++]	= currentLine;
+		}
+
+		return metrics;
 	}
 
 	// PROTECTED METHODS
@@ -237,7 +325,7 @@ public class Model extends Observable
 		{
 			ClassContainer[] allClasses	= classes.values().toArray(new ClassContainer[classes.size()]);
 
-			Metrics.resetAndPrecalculate(allClasses);
+			Metrics metrics	= new Metrics(allClasses);
 
 			Iterator<Entry<String, ClassContainer>>	iterator	= getClassIterator();
 
@@ -245,28 +333,29 @@ public class Model extends Observable
 			{
 				ClassContainer classContainer = getClassContainerFromIterator(iterator);
 
-				classContainer.calculateMetrics();
+				classContainer.setMetrics(metrics.getMetrics(classContainer));
 			}
 		}
 
 		{
-			ArrayList<String> classNames						= new ArrayList<String>();
+			sortedClassNames									= new ArrayList<String>();
 			Iterator<Entry<String, ClassContainer>>	iterator	= getClassIterator();
 
 			while(iterator.hasNext())
 			{
 				ClassContainer classContainer = getClassContainerFromIterator(iterator);
 
-				//classContainer.calculateMetrics();
-
 				classContainer.buildCaches();
 
-				classNames.add(classContainer.getName());
+				sortedClassNames.add(classContainer.getName());
 			}
 
-			Collections.sort(classNames);
+			Collections.sort(sortedClassNames);
 
-			sendList(ListContainer.CLASS_LIST, classNames.toArray(new String[classNames.size()]));
+			sendList(ListContainer.CLASS_LIST, sortedClassNames.toArray(new String[sortedClassNames.size()]));
+
+			/* Let's unlink the model so the garbage collector can clear some memory. */
+			umlModel	= null;
 		}
 	}
 
@@ -331,6 +420,11 @@ public class Model extends Observable
 					throw resetAndReturnException(ERRORS.UNKNOWN_GENERALIZATION_SUBCLASS)
 						.set(ATTRIBUTES.SUPERCLASS, superclassName)
 						.set(ATTRIBUTES.SUBCLASS, subclassName);
+				}
+
+				if(!allowMultipleInheritance && (0 < subClass.getNumberOfSuperClasses()))
+				{
+					throw resetAndReturnException(ERRORS.MULTIPLE_INHERITANCE_NOT_ALLOWED);
 				}
 
 				/* Let's link the superclass and the subclass together. */
@@ -492,6 +586,12 @@ public class Model extends Observable
 		}
 	}
 
+	/**
+	 * Links classed that are linked together via aggregations. An aggregation has a "container" class and one or more
+	 * "part" classes.
+	 *
+	 * @throws ModelException	Thrown whenever an error occurs.
+	 */
 	void createAndCheckAggregations() throws ModelException
 	{
 		/* Let's loop through the aggregations contained in the model. */
@@ -555,6 +655,13 @@ public class Model extends Observable
 		return classes.entrySet().iterator();
 	}
 
+	/**
+	 * Directly return the instance of {@link ClassContainer} from the class iterator.
+	 *
+	 * @param iterator	The iterator.
+	 *
+	 * @return	The instance of {@link ClassContainer} at current position in the iterator.
+	 */
 	ClassContainer getClassContainerFromIterator(Iterator<Entry<String, ClassContainer>> iterator)
 	{
 		return iterator.next().getValue();
@@ -585,6 +692,13 @@ public class Model extends Observable
 		notifyObservers(string);
 	}
 
+	/**
+	 * Resets the model (to try to reduce memory) and returns a new exception.
+	 *
+	 * @param error	The type of the error.
+	 *
+	 * @return	A new instance of {@link ModelException}.
+	 */
 	protected ModelException resetAndReturnException(ModelException.ERRORS error)
 	{
 		resetModel();
@@ -592,6 +706,9 @@ public class Model extends Observable
 		return new ModelException(error);
 	}
 
+	/**
+	 * Resets the model by setting some properties to null so the garbage collector might be able to free some memory.
+	 */
 	protected void resetModel()
 	{
 		umlModel	= null;

@@ -4,7 +4,6 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Observable;
@@ -28,9 +27,20 @@ import javax.swing.event.ListSelectionListener;
 
 import mvc.Controller;
 import mvc.models.ListContainer;
+import mvc.models.Model;
 
+/**
+ * This class is the one containing the GUI shown to the user. It is a dummy class which responds to messages sent by
+ * the {@link Model} and {@link Controller}. It also notifies the {@link Controller} when events occur like elements
+ * being clicked.
+ *
+ * @author Hubert Lemelin
+ *
+ */
 public class MainWindow	extends JFrame implements Observer
 {
+	/* Run away, this is the worst class EVER! */
+
 	// PROTECTED PROPERTIES
 
 	/**
@@ -43,6 +53,8 @@ public class MainWindow	extends JFrame implements Observer
 	protected JButton selectFileButton;
 
 	protected JButton parseButton;
+
+	protected JButton createMetricsFileButton;
 
 	protected JList<String> classList;
 
@@ -58,6 +70,8 @@ public class MainWindow	extends JFrame implements Observer
 
 	protected JList<String> aggregationList;
 
+	protected JList<String> metricList;
+
 	protected JLabel detailLabel;
 
 	protected JTextArea detailTextArea;
@@ -70,15 +84,23 @@ public class MainWindow	extends JFrame implements Observer
 	{
 		super("IFT3913 :: TP2 par Hubert Lemelin");
 
-		super.setSize(800, 800);
+		super.setSize(1200, 800);
+
+		setResizable(false);
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-		setLayout(new GridBagLayout());
+		//setLayout(new GridBagLayout());
+		setLayout(null);
+
+		int PANEL_HEIGHT = 75;
 
 		filenameLabel	= new JLabel();
 
 		filenameLabel.setPreferredSize(new Dimension(450, 20));
+		filenameLabel.setMinimumSize(new Dimension(450, 20));
+		filenameLabel.setMaximumSize(new Dimension(450, 20));
+
 		filenameLabel.setText("");
 		filenameLabel.setBorder(BorderFactory.createStrokeBorder(new BasicStroke(1)));
 
@@ -99,7 +121,7 @@ public class MainWindow	extends JFrame implements Observer
 
 		getContentPane().add(filePanel, c);
 
-		parseButton	= new JButton("Analyser");
+		filePanel.setBounds(0, 0, getWidth(), PANEL_HEIGHT);
 
 		encodingComboBox	= new JComboBox<String>(new String[] {"ISO-8859-1", "UTF-8"});
 
@@ -117,15 +139,38 @@ public class MainWindow	extends JFrame implements Observer
 
 		getContentPane().add(optionPanel, c);
 
+		optionPanel.setBounds(0, 1 * PANEL_HEIGHT, getWidth(), PANEL_HEIGHT);
+
 		JPanel actionPanel	= new JPanel();
-		actionPanel.add(parseButton);
+
 		actionPanel.setBorder(BorderFactory.createTitledBorder("Actions"));
+
+		parseButton			= new JButton("Analyser");
+
+		createMetricsFileButton	= new JButton("Créer le fichier des métriques");
+
+		actionPanel.add(parseButton);
+		actionPanel.add(createMetricsFileButton);
+
+
+
+
 
 		++c.gridy;
 
 		getContentPane().add(actionPanel, c);
 
-		JPanel mainPanel	= new JPanel(new GridBagLayout());
+		actionPanel.setBounds(0, 2 * PANEL_HEIGHT, getWidth(), PANEL_HEIGHT);
+
+		int remainingHeight	= getHeight() - (3 * PANEL_HEIGHT) - 23;
+
+		int PANEL_HEIGHT1 = (remainingHeight - 17) / 4;
+
+		int LEFT = 5;
+		int TOP = 15;
+		int PANEL_WIDTH	= (getWidth() / 4) - 3;
+
+		JPanel mainPanel	= new JPanel(null);
 
 		GridBagConstraints c1	= new GridBagConstraints();
 
@@ -133,7 +178,7 @@ public class MainWindow	extends JFrame implements Observer
 
 		c1.gridx = 0;
 		c1.gridy = 0;
-		c1.weightx = (float) 1 / 3;
+		c1.weightx = (float) 1.0/4;
 		c1.weighty = 1.0;
 		c1.gridheight = 4;
 
@@ -161,6 +206,8 @@ public class MainWindow	extends JFrame implements Observer
 
 		mainPanel.add(classPanel, c1);
 
+		classPanel.setBounds(LEFT, TOP, PANEL_WIDTH, 4 * PANEL_HEIGHT1);
+
 		JPanel attributePanel	= new JPanel(new BorderLayout());
 		attributePanel.setBorder(BorderFactory.createTitledBorder("Attributs"));
 
@@ -175,10 +222,12 @@ public class MainWindow	extends JFrame implements Observer
 		attributePanel.add(new JScrollPane(attributeList));
 
 		c1.gridx = 1;
-		c1.weighty = (float) 1 / 4;
+		c1.weighty = (float) 1.0 / 4;
 		c1.gridheight = 1;
 
 		mainPanel.add(attributePanel, c1);
+
+		attributePanel.setBounds(LEFT + PANEL_WIDTH, TOP, PANEL_WIDTH, PANEL_HEIGHT1);
 
 		JPanel subclassPanel	= new JPanel(new BorderLayout());
 
@@ -199,6 +248,8 @@ public class MainWindow	extends JFrame implements Observer
 
 		mainPanel.add(subclassPanel, c1);
 
+		subclassPanel.setBounds(LEFT + (1 * PANEL_WIDTH), TOP + (1 * PANEL_HEIGHT1), PANEL_WIDTH, PANEL_HEIGHT1);
+
 		JPanel superclassPanel	= new JPanel(new BorderLayout());
 
 		superclassPanel.setBorder(BorderFactory.createTitledBorder("Super-classes"));
@@ -212,6 +263,8 @@ public class MainWindow	extends JFrame implements Observer
 		superclassList.setVisibleRowCount(-1);
 
 		superclassPanel.add(new JScrollPane(superclassList));
+
+		superclassPanel.setBounds(LEFT + (2 * PANEL_WIDTH), TOP + (1 * PANEL_HEIGHT1), PANEL_WIDTH, PANEL_HEIGHT1);
 
 		c1.gridx = 2;
 		c1.gridy = 1;
@@ -230,6 +283,8 @@ public class MainWindow	extends JFrame implements Observer
 		methodList.setVisibleRowCount(-1);
 
 		methodPanel.add(new JScrollPane(methodList));
+
+		methodPanel.setBounds(LEFT + (2 * PANEL_WIDTH), TOP, PANEL_WIDTH, PANEL_HEIGHT1);
 
 		c1.gridx = 2;
 		c1.gridy = 0;
@@ -254,6 +309,8 @@ public class MainWindow	extends JFrame implements Observer
 
 		mainPanel.add(associationPanel, c1);
 
+		associationPanel.setBounds(LEFT + (1 * PANEL_WIDTH), TOP + (2 * PANEL_HEIGHT1), PANEL_WIDTH, PANEL_HEIGHT1);
+
 		JPanel aggregationPanel	= new JPanel(new BorderLayout());
 		aggregationPanel.setBorder(BorderFactory.createTitledBorder("Agrégations"));
 
@@ -272,7 +329,10 @@ public class MainWindow	extends JFrame implements Observer
 
 		mainPanel.add(aggregationPanel, c1);
 
+		aggregationPanel.setBounds(LEFT + (2 * PANEL_WIDTH), TOP + (2 * PANEL_HEIGHT1), PANEL_WIDTH, PANEL_HEIGHT1);
+
 		JPanel detailPanel	= new JPanel(new BorderLayout());
+
 		detailPanel.setBorder(BorderFactory.createTitledBorder("Détails"));
 
 		detailTextArea	= new JTextArea();
@@ -280,6 +340,9 @@ public class MainWindow	extends JFrame implements Observer
 		detailTextArea.setEditable(false);
 
 		detailTextArea.setBorder(BorderFactory.createLoweredBevelBorder());
+
+		detailTextArea.setLineWrap(true);
+		detailTextArea.setWrapStyleWord(true);
 
 		c1.gridx = 1;
 		c1.gridy = 3;
@@ -289,10 +352,37 @@ public class MainWindow	extends JFrame implements Observer
 
 		mainPanel.add(detailPanel, c1);
 
+		detailPanel.setBounds(LEFT + (1 * PANEL_WIDTH), TOP + (3 * PANEL_HEIGHT1), 2 * PANEL_WIDTH, PANEL_HEIGHT1);
+
+		JPanel metricPanel	= new JPanel(new BorderLayout());
+
+		metricPanel.setBorder(BorderFactory.createTitledBorder("Métriques"));
+
+		metricList	= new JList<String>();
+
+		metricList.setBorder(BorderFactory.createLoweredBevelBorder());
+
+		metricList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+		metricList.setVisibleRowCount(-1);
+
+		metricPanel.add(new JScrollPane(metricList));
+
+		c1.gridx = 3;
+		c1.gridy = 0;
+		c1.weighty	= 1.0;
+		c1.gridheight	= 4;
+
+		mainPanel.add(metricPanel, c1);
+
+		metricPanel.setBounds(LEFT + (3 * PANEL_WIDTH), TOP + (0 * PANEL_HEIGHT1), PANEL_WIDTH, PANEL_HEIGHT1 * 4);
+
 		++c.gridy;
 		c.weighty = 1.0;
 
 		getContentPane().add(mainPanel, c);
+
+		mainPanel.setBounds(0, 3 * PANEL_HEIGHT, getWidth(), remainingHeight);
 
 		selectFileButton.addActionListener(new ActionListener()
 		{
@@ -309,6 +399,15 @@ public class MainWindow	extends JFrame implements Observer
 			public void actionPerformed(ActionEvent e)
 			{
 				parseButtonClicked();
+			}
+		});
+
+		createMetricsFileButton.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				createMetricsFileButtonClicked();
 			}
 		});
 
@@ -348,10 +447,37 @@ public class MainWindow	extends JFrame implements Observer
 			}
 		});
 
+		metricList.addListSelectionListener(new ListSelectionListener()
+		{
+			@Override
+			public void valueChanged(ListSelectionEvent e)
+			{
+				if(!e.getValueIsAdjusting() && !classList.isSelectionEmpty())
+				{
+					metricListClicked();
+				}
+			}
+		});
+
+		//multipleInheritanceCheckBox
+		multipleInheritanceCheckBox.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				multipleInheritanceCheckBoxClicked();
+
+			}});
+
 		setVisible(true);
 	}
 
 	// PUBLIC METHODS
+
+	public void setDetails(String string)
+	{
+		detailTextArea.setText(string);
+	}
 
 	public String getSelectedClass()
 	{
@@ -373,6 +499,16 @@ public class MainWindow	extends JFrame implements Observer
 		return aggregationList.getSelectedIndex();
 	}
 
+	public int getSelectedMetricIndex()
+	{
+		return metricList.getSelectedIndex();
+	}
+
+	public Boolean isMultipleInheritanceCheckBoxChecked()
+	{
+		return multipleInheritanceCheckBox.isSelected();
+	}
+
 	public void setController(Controller controller)
 	{
 		this.controller	= controller;
@@ -381,6 +517,109 @@ public class MainWindow	extends JFrame implements Observer
 	public void setFilename(String filename)
 	{
 		filenameLabel.setText(filename);
+	}
+
+	public void enableParseButton()
+	{
+		parseButton.setEnabled(true);
+	}
+
+	public void disableParseButton()
+	{
+		parseButton.setEnabled(false);
+	}
+
+	public void enablecreateMetricsFileButton()
+	{
+		createMetricsFileButton.setEnabled(true);
+	}
+
+	public void disablecreateMetricsFileButton()
+	{
+		createMetricsFileButton.setEnabled(false);
+	}
+
+	public void resetElements()
+	{
+		DefaultListModel<String> emptyModel	= new DefaultListModel<String>();
+
+		classList.setModel(emptyModel);
+		attributeList.setModel(emptyModel);
+		methodList.setModel(emptyModel);
+		subclassList.setModel(emptyModel);
+		associationList.setModel(emptyModel);
+		metricList.setModel(emptyModel);
+
+		detailTextArea.setText("");
+	}
+
+	public void showError(String errorMessage)
+	{
+		JOptionPane.showMessageDialog(this, errorMessage, "Erreur", JOptionPane.ERROR_MESSAGE);
+	}
+
+	public void showSuccess(String successMessage)
+	{
+		JOptionPane.showMessageDialog(this, successMessage, "Succès", JOptionPane.INFORMATION_MESSAGE);
+	}
+
+
+	@Override
+	public void update(Observable o, Object arg)
+	{
+		if(arg instanceof String)
+		{
+			detailTextArea.setText((String) arg);
+
+			return;
+		}
+
+		if(arg instanceof ListContainer)
+		{
+			ListContainer listContainer	= (ListContainer) arg;
+
+			DefaultListModel<String> listModel	= new DefaultListModel<String>();
+
+			for(Object obj : ((ListContainer) arg).getList())
+			{
+				listModel.addElement(obj.toString());
+			}
+
+			if(listContainer.getId() == ListContainer.CLASS_LIST)
+			{
+				resetElements();
+
+				classList.setModel(listModel);
+			}
+			else if(listContainer.getId() == ListContainer.ATTRIBUTE_LIST)
+			{
+				attributeList.setModel(listModel);
+			}
+			else if(listContainer.getId() == ListContainer.OPERATION_LIST)
+			{
+				methodList.setModel(listModel);
+			}
+			else if(listContainer.getId() == ListContainer.SUBCLASS_LIST)
+			{
+				subclassList.setModel(listModel);
+			}
+			else if(listContainer.getId() == ListContainer.SUPERCLASS_LIST)
+			{
+				superclassList.setModel(listModel);
+			}
+			else if(listContainer.getId() == ListContainer.ASSOCIATION_LIST)
+			{
+				associationList.setModel(listModel);
+			}
+			else if(listContainer.getId() == ListContainer.AGGREGATION_LIST)
+			{
+				aggregationList.setModel(listModel);
+			}
+			else if(listContainer.getId() == ListContainer.METRIC_LIST)
+			{
+				metricList.setModel(listModel);
+			}
+		}
 	}
 
 	// PROTECTED METHODS
@@ -398,6 +637,14 @@ public class MainWindow	extends JFrame implements Observer
 		if(null != controller)
 		{
 			controller.parseButtonClicked();
+		}
+	}
+
+	protected void createMetricsFileButtonClicked()
+	{
+		if(null != controller)
+		{
+			controller.createMetricsFileButtonClicked();
 		}
 	}
 
@@ -427,104 +674,19 @@ public class MainWindow	extends JFrame implements Observer
 		}
 	}
 
-	@Override
-	public void update(Observable o, Object arg)
+	protected void metricListClicked()
 	{
-		if(arg instanceof String)
+		if(null != controller)
 		{
-			detailTextArea.setText((String) arg);
-
-			return;
-		}
-
-		/*if(arg instanceof mvc.ErrorCenter.Error)
-		{
-			Error error			= (Error) arg;
-			String errorMessage	= "";
-
-			/* Pseudoswitch because Java 6 can't switch on longs and even though it's always the same at the moment,
-			 * someone may want to handle each error type differently. * /
-			if(error.number == ErrorCenter.INVALID_FILE)
-			{
-				errorMessage	= error.message;
-			}
-			else if(error.number == ErrorCenter.PARSING_FAILED)
-			{
-				errorMessage	= error.message;
-			}
-			// ...
-			else
-			{
-				errorMessage	= error.message;
-			}
-
-			JOptionPane.showMessageDialog(this, errorMessage, "Erreur", JOptionPane.ERROR_MESSAGE);
-		}
-		else */
-		if(arg instanceof ListContainer)
-		{
-			ListContainer listContainer	= (ListContainer) arg;
-
-			DefaultListModel<String> listModel	= new DefaultListModel<String>();
-
-			for(Object obj : ((ListContainer) arg).getList())
-			{
-				listModel.addElement(obj.toString());
-			}
-
-			if(listContainer.getId() == ListContainer.CLASS_LIST)
-			{
-				classList.removeAll();
-				attributeList.removeAll();
-				methodList.removeAll();
-				subclassList.removeAll();
-				associationList.removeAll();
-				detailTextArea.setText("");
-
-				classList.setModel(listModel);
-			}
-			else if(listContainer.getId() == ListContainer.ATTRIBUTE_LIST)
-			{
-				attributeList.removeAll();
-
-				attributeList.setModel(listModel);
-			}
-			else if(listContainer.getId() == ListContainer.OPERATION_LIST)
-			{
-				methodList.removeAll();
-
-				methodList.setModel(listModel);
-			}
-			else if(listContainer.getId() == ListContainer.SUBCLASS_LIST)
-			{
-				subclassList.removeAll();
-
-				subclassList.setModel(listModel);
-			}
-			else if(listContainer.getId() == ListContainer.SUPERCLASS_LIST)
-			{
-				superclassList.removeAll();
-
-				superclassList.setModel(listModel);
-			}
-			else if(listContainer.getId() == ListContainer.ASSOCIATION_LIST)
-			{
-				associationList.removeAll();
-
-				associationList.setModel(listModel);
-			}
-			else if(listContainer.getId() == ListContainer.AGGREGATION_LIST)
-			{
-				aggregationList.removeAll();
-
-				aggregationList.setModel(listModel);
-			}
+			controller.metricListClicked();
 		}
 	}
 
-	public void showError(String errorMessage)
+	protected void multipleInheritanceCheckBoxClicked()
 	{
-		// TODO reset lists
-		JOptionPane.showMessageDialog(this, errorMessage, "Erreur", JOptionPane.ERROR_MESSAGE);
+		if(null != controller)
+		{
+			controller.multipleInheritanceCheckBoxClicked();
+		}
 	}
 }

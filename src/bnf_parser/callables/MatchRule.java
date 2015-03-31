@@ -49,17 +49,13 @@ public class MatchRule extends Callable
 			{
 				/* If the parsing of the rule succeeds, the parser will return a Collector (it can be NULL). */
 				addCollector(parser.evaluateRule(rule));
-
-// TODO remove
-//System.out.println(rule.getName() + " success");
 			}
 			catch (Exception e)
 			{
 				/* If the parsing fails, let's simply break. We don't necessarily want to return false as we might want
 				 * to check if the rule matches a certain number of times, between a minimum and a maximum. Returning
 				 * false would break that logic. */
-// TODO remove
-//System.out.println(rule.getName() + " failed");
+
 				break;
 			}
 

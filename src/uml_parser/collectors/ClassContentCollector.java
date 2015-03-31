@@ -29,6 +29,9 @@ public class ClassContentCollector extends Collector implements ClassContent
 	 */
 	protected OperationListCollector operationListCollector;
 
+	/**
+	 * Constructor.
+	 */
 	public ClassContentCollector()
 	{
 		super();

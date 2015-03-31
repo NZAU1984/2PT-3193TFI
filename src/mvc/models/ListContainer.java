@@ -1,5 +1,12 @@
 package mvc.models;
 
+/**
+ * This class is how the model can send data to the view. It reduces the coupling between the two classes. It simply
+ * contains an identifier and a list of {@link Object}'s.
+ *
+ * @author Hubert Lemelin
+ *
+ */
 public class ListContainer
 {
 	// PUBLIC CONSTANTS
@@ -39,9 +46,10 @@ public class ListContainer
 	 */
 	public static final long AGGREGATION_LIST	= 1L << 6;
 
-
-
-
+	/**
+	 * List of all the metrics of one class.
+	 */
+	public static final long METRIC_LIST	= 1L << 7;
 
 	// PROPERTEC PROPERTIES
 
@@ -57,6 +65,14 @@ public class ListContainer
 
 	// PUBLIC STATIC METHODS
 
+	/**
+	 * Returns a new instance of {@link ListContainer}.
+	 *
+	 * @param id	The id (type) of the list.
+	 * @param list	An array of {@link Object}'s to be sent to the view.
+	 *
+	 * @return	The new instance.
+	 */
 	public static ListContainer newList(long id, Object[] list)
 	{
 		return new ListContainer(id, list);
@@ -64,6 +80,12 @@ public class ListContainer
 
 	// PROTECTED CONSTRUCTOR
 
+	/**
+	 * Constructor.
+	 *
+	 * @param id	The id (type) of the list.
+	 * @param list	An array of {@link Object}'s to be sent to the view.
+	 */
 	protected ListContainer(long id, Object[] list)
 	{
 		this.id		= id;

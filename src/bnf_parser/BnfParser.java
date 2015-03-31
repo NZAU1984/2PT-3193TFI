@@ -16,6 +16,13 @@ import bnf_parser.callables.CallableContainsMoreThanOneCollectorException;
 import bnf_parser.collectors.Collector;
 
 
+/**
+ * This class allows to transform a file to a collection of nested objects based on specific rules defined by the user.
+ * Nested objects are in fact classes that extend {@link Collector}. Rules are defined using the class {@link Rule}.
+ *
+ * @author Hubert Lemelin
+ *
+ */
 public class BnfParser
 {
 	// PUBLIC STATIC CONSTANTS
@@ -72,7 +79,7 @@ public class BnfParser
 	/**
 	 * Returns a new empty {@link Rule}.
 	 *
-	 * @return
+	 * @return	A new empty rule.
 	 */
 	public Rule newRule()
 	{
@@ -98,24 +105,52 @@ public class BnfParser
 		return subparser.evaluateRule(rule);
 	}
 
+	/**
+	 * Inner class which is the brain of the parser. All the magic happens here.
+	 *
+	 * @author Hubert Lemelin
+	 *
+	 */
 	protected class Subparser implements SubparserInterface
 	{
 		// PROTECTED PROPERTIES
 
+		/**
+		 * Stores the filesize of current opened file.
+		 */
 		protected long fileSize;
 
+		/**
+		 * Stored the charset currently used to read the file.
+		 */
 		protected String fileCharset;
 
+		/**
+		 * The instance of {@link FileInputStream} used to read the file.
+		 */
 		protected FileInputStream fileInputStream;
 
+		/**
+		 * The instance of {@link CharBuffer} used to read the file. This allows to get substrings in the file without
+		 * having to move the cursor explicitly.
+		 */
 		protected CharBuffer charBuffer;
 
+		/**
+		 * Current character position in the file. A character may have more than one byte.
+		 */
 		protected int charBufferPosition;
 
+		/**
+		 * Current byte position in the file.
+		 */
 		protected int rawBufferPosition;
 
 		// PUBLIC CONSTRUCTORS
 
+		/**
+		 * Constructor.
+		 */
 		public Subparser()
 		{
 
@@ -123,6 +158,14 @@ public class BnfParser
 
 		// PUBLIC METHODS
 
+		/**
+		 * Opens the specified file.
+		 *
+		 * @param filename	The filename of the file to open.
+		 * @param charset	The charset to be used to read the file.
+		 *
+		 * @throws IOException	Thrown whenever a file error occurs.
+		 */
 		public void open(String filename, String charset) throws IOException
 		{
 			if(!UTF8_ENCODING.equals(charset) && !LATIN_1_ENCODING.equals(charset))
@@ -147,8 +190,16 @@ public class BnfParser
 	        rawBufferPosition		= 0;
 		}
 
+		/**
+		 * Closes the current file.
+		 */
 		public void close()
 		{
+			if(null == fileInputStream)
+			{
+				return;
+			}
+
 			try
 			{
 				fileInputStream.close();
@@ -183,6 +234,7 @@ public class BnfParser
 
 			int startOffset	= getBufferPosition();
 
+			/* The rule only has one instance, so we must reset it before adding collectors to it. */
 			rule.resetIterator();
 
 			int bufferPositionBeforeParsing		= getBufferPosition();
@@ -190,10 +242,13 @@ public class BnfParser
 
 			while(rule.hasNext())
 			{
+				/* Get next subrule. */
 				Callable callable	= rule.next();
 
 				if(!callable.parse(this))
 				{
+					/* Subrule failed. Let's throw an exception. */
+
 					setBufferPosition(bufferPositionBeforeParsing);
 					setRawBufferPosition(rawBufferPositionBeforeParsing);
 
@@ -202,10 +257,15 @@ public class BnfParser
 
 				if(rule.doOverrideCollector())
 				{
+					/* If the current subrule "offers" its collector to the rule, let's grab it. */
+
 					collector = callable.getCollector();
 				}
 				else if(rule.noCollectorOverriding() && (null != collector))
 				{
+					/* If there is no collector overriding and the rule has a collector, let's add all the current
+					 * subrule's collectors to it.  */
+
 					for(Collector callableCollector	: callable.getCollectors())
 					{
 						collector.addChild(callableCollector, rule.getIndex());
@@ -215,12 +275,15 @@ public class BnfParser
 
 			if(rule.doMatchEndOfFile() && (rawBufferPosition != fileSize))
 			{
+				/* All subrules were applied but the rule has to match the end of file but it doesn't: exception. */
 				throw new ParsingFailedException();
 			}
 
 
 			if(null != collector)
 			{
+				/* If there is a collector, let's send the start/end offsets in the file. */
+
 				collector.setOffsets(startOffset, getBufferPosition());
 			}
 
@@ -258,14 +321,18 @@ public class BnfParser
 		// PROTECTED METHODS
 
 		/**
-		 * Returns the buffer's current position.
-		 * @return the buffer's current position
+		 * Returns the buffer's current position (character position).
+		 * @return	The buffer's current position.
 		 */
 		protected int getBufferPosition()
 		{
 			return charBufferPosition;
 		}
 
+		/**
+		 * Returns the buffer's current position (byte position).
+		 * @return	The buffer's current position.
+		 */
 		protected int getRawBufferPosition()
 		{
 			return rawBufferPosition;
@@ -274,7 +341,7 @@ public class BnfParser
 		/**
 		 * Sets the buffer position.
 		 *
-		 * @param position
+		 * @param	The position.
 		 */
 		protected void setBufferPosition(int position)
 		{
@@ -283,16 +350,31 @@ public class BnfParser
 			charBuffer.position(charBufferPosition);
 		}
 
+		/**
+		 * Sets the raw position of the buffer.
+		 *
+		 * @param position	The position.
+		 */
 		protected void setRawBufferPosition(int position)
 		{
 			rawBufferPosition	= position;
 		}
 
+		/**
+		 * Increments the raw buffer positoin by {@code increment}.
+		 *
+		 * @param increment	The increment step.
+		 */
 		protected void incrementRawBufferPosition(int increment)
 		{
 			rawBufferPosition	+= increment;
 		}
 
+		/**
+		 * Increments the raw buffer position according to the string length computed using the used charset.
+		 *
+		 * @param string	The string form which calculate the length.
+		 */
 		protected void incrementRawBufferPosition(String string)
 		{
 			if(null == string)

@@ -28,6 +28,12 @@ import bnf_parser.Rule;
 import bnf_parser.callables.CallableContainsMoreThanOneCollectorException;
 import bnf_parser.collectors.Collector;
 
+/**
+ * This class transforms a UML definition file into a collection of nested objects.
+ *
+ * @author Hubert Lemelin
+ *
+ */
 public class UmlParser
 {
 	// PUBLIC STATIC CONSTANTS
@@ -207,18 +213,18 @@ public class UmlParser
 		try
 		{
 			/* Below is a set of rules which we will not explain. Please refer to "TP1". */
-			space	= bnfParser.newRule().setName("space")
+			space	= bnfParser.newRule()
 					.matchPatternWithoutCollecting("\\s+", 1, 1);
 
-			identifier = bnfParser.newRule().setName("identifier")
+			identifier = bnfParser.newRule()
 						.matchPattern("[A-Za-z_\\-0-9]+", 1, 1).overrideCollector();
 
-			type	= bnfParser.newRule().setName("multiplicity")
+			type	= bnfParser.newRule()
 					.matchRule(identifier, 1, 1).overrideCollector();
 
 			/* A dataitem corresponds to <identifier>:<multiplicity> (with/without spaces). Since 'identifier' and 'multiplicity' both
 			 * return a StringCollector, we help differentiate them by setting different indices. */
-			dataitem	= bnfParser.newRule().setCollector(DataitemCollector.class).setName("dataitem")
+			dataitem	= bnfParser.newRule().setCollector(DataitemCollector.class)
 					.matchRule(space, 0, 1)
 					.matchRule(identifier, 1, 1).setIndex(0)
 					.matchRule(space, 0, 1)
@@ -227,7 +233,7 @@ public class UmlParser
 					.matchRule(identifier, 1, 1).setIndex(1)
 					.matchRule(space, 0, 1);
 
-			dataitemOptionalRepeat	= bnfParser.newRule().setName("dataitemOptionalRepeat")
+			dataitemOptionalRepeat	= bnfParser.newRule()
 					.matchStringWithoutCollecting(",", 1, 1)
 					.matchRule(dataitem, 1, 1).overrideCollector();
 
@@ -240,11 +246,11 @@ public class UmlParser
 			 *       times an element preceeded by a come (rule "dataitemOptionalRepeat')
 			 *     - Finally, where the list is optional, like in 'operation', simply ask to match the rule
 			 *       'dataitemList' 0 or 1 time. */
-			dataitemList	= bnfParser.newRule().setCollector(DataitemListCollector.class).setName("dataitemlist")
+			dataitemList	= bnfParser.newRule().setCollector(DataitemListCollector.class)
 					.matchRule(dataitem, 1, 1)
 					.matchRule(dataitemOptionalRepeat, 0, Rule.INFINITY);
 
-			operation	= bnfParser.newRule().setCollector(OperationCollector.class).setName("operation")
+			operation	= bnfParser.newRule().setCollector(OperationCollector.class)
 					.matchRule(space, 0, 1)
 					.matchRule(identifier, 1, 1).setIndex(0)
 					.matchRule(space, 0, 1)
@@ -257,20 +263,20 @@ public class UmlParser
 					.matchRule(type, 1, 1).setIndex(1)
 					.matchRule(space, 0, 1);
 
-			operationOptionalRepeat	= bnfParser.newRule().setName("operationOptionalRepeat")
+			operationOptionalRepeat	= bnfParser.newRule()
 					.matchStringWithoutCollecting(",", 1, 1)
 					.matchRule(operation, 1, 1).overrideCollector();
 
-			operationList	= bnfParser.newRule().setCollector(OperationListCollector.class).setName("operationList")
+			operationList	= bnfParser.newRule().setCollector(OperationListCollector.class)
 					.matchRule(space, 1, 1)
 					.matchRule(operation, 1, 1)
 					.matchRule(operationOptionalRepeat, 0, Rule.INFINITY);
 
-			operations	= bnfParser.newRule().setName("operations")
+			operations	= bnfParser.newRule()
 					.matchStringWithoutCollecting("OPERATIONS", 1, 1)
 					.matchRule(operationList, 0, 1).overrideCollector();
 
-			classContent	= bnfParser.newRule().setCollector(ClassContentCollector.class).setName("classContent")
+			classContent	= bnfParser.newRule().setCollector(ClassContentCollector.class)
 					.matchRule(space, 0, 1)
 					.matchStringWithoutCollecting("CLASS", 1, 1)
 
@@ -300,17 +306,17 @@ public class UmlParser
 
 			/* ASSOCIATION */
 
-			multiplicity	= bnfParser.newRule().setName("multiplicity")
+			multiplicity	= bnfParser.newRule()
 					.matchPattern("ONE_OR_MANY|ONE|MANY|OPTIONALLY_ONE|UNDEFINED", 1, 1).overrideCollector();
 
-			role	= bnfParser.newRule().setCollector(RoleCollector.class).setName("role")
+			role	= bnfParser.newRule().setCollector(RoleCollector.class)
 					.matchStringWithoutCollecting("CLASS", 1, 1)
 					.matchRule(space, 1, 1)
 					.matchRule(identifier, 1, 1).setIndex(0)
 					.matchRule(space, 1, 1)
 					.matchRule(multiplicity, 1, 1).setIndex(1);
 
-			association	= bnfParser.newRule().setCollector(AssociationCollector.class).setName("association")
+			association	= bnfParser.newRule().setCollector(AssociationCollector.class)
 					.matchRule(space, 0, 1)
 					.matchStringWithoutCollecting("RELATION", 1, 1)
 					.matchRule(space, 1, 1)
@@ -329,18 +335,18 @@ public class UmlParser
 
 			/* GENERALIZATION */
 
-			identifierOptionalRepeat	= bnfParser.newRule().setName("identifierOptionalRepeat")
+			identifierOptionalRepeat	= bnfParser.newRule()
 					.matchStringWithoutCollecting(",", 1, 1)
 					.matchRule(space, 0, 1)
 					.matchRule(identifier, 1, 1).overrideCollector()
 					.matchRule(space, 0, 1);
 
-			identifierList	= bnfParser.newRule().setCollector(IdentifierListCollector.class).setName("identifierList")
+			identifierList	= bnfParser.newRule().setCollector(IdentifierListCollector.class)
 					.matchRule(space, 0, 1)
 					.matchRule(identifier, 1, 1)
 					.matchRule(identifierOptionalRepeat, 0, Rule.INFINITY);
 
-			generalization	= bnfParser.newRule().setCollector(GeneralizationCollector.class).setName("generalization")
+			generalization	= bnfParser.newRule().setCollector(GeneralizationCollector.class)
 					.matchRule(space, 0, 1)
 					.matchStringWithoutCollecting("GENERALIZATION", 1, 1)
 					.matchRule(space,  1, 1)
@@ -355,17 +361,17 @@ public class UmlParser
 
 			/* AGGREGATION */
 
-			roleOptionalRepeat	= bnfParser.newRule().setName("roleOptionalRepeat")
+			roleOptionalRepeat	= bnfParser.newRule()
 					.matchRule(space, 0, 1)
 					.matchStringWithoutCollecting(",", 1, 1)
 					.matchRule(space, 0, 1)
 					.matchRule(role, 1, 1).overrideCollector();
 
-			roleList	= bnfParser.newRule().setCollector(RoleListCollector.class).setName("roleList")
+			roleList	= bnfParser.newRule().setCollector(RoleListCollector.class)
 					.matchRule(role, 1, 1)
 					.matchRule(roleOptionalRepeat, 0, Rule.INFINITY);
 
-			aggregation	= bnfParser.newRule().setCollector(AggregationCollector.class).setName("aggregation")
+			aggregation	= bnfParser.newRule().setCollector(AggregationCollector.class)
 					.matchRule(space, 0, 1)
 					.matchStringWithoutCollecting("AGGREGATION", 1, 1)
 					.matchRule(space, 0, 1)

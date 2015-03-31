@@ -19,6 +19,9 @@ public class IdentifierListCollector extends Collector implements IdentifierList
 	 */
 	protected ArrayList<String>	identifiers;
 
+	/**
+	 * Constructor.
+	 */
 	public IdentifierListCollector()
 	{
 		super();

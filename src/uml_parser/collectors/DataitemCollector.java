@@ -21,6 +21,9 @@ public class DataitemCollector extends Collector implements Dataitem
 	 */
 	protected String type;
 
+	/**
+	 * Constructor.
+	 */
 	public DataitemCollector()
 	{
 		super();

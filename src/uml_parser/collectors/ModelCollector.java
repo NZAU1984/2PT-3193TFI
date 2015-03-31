@@ -43,6 +43,9 @@ public class ModelCollector extends Collector implements Model
 	 */
 	protected ArrayList<AggregationCollector> aggregationCollectors;
 
+	/**
+	 * Constructor.
+	 */
 	public ModelCollector()
 	{
 		super();
